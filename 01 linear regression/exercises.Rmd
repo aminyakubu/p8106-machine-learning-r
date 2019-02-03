@@ -1,0 +1,96 @@
+---
+title: "applied_lm"
+author: "Amin Yakubu"
+date: "1/29/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(message = FALSE)
+```
+
+```{r}
+library(tidyverse)
+library(ISLR)
+library(MASS)
+```
+
+Here, I'll be using the `Auto` dataset. 
+
+```{r}
+data("Auto")
+```
+
+```{r}
+attach(Auto)
+fit = lm(mpg ~ horsepower)
+summary(fit)
+```
+
+Is there a relationship between the predictor and the response?
+
+The results show that there is a negative relationship between `mpg` (miles per gallon) and horsepower. For every one unit increase in horsepower, miles per gallon decreases by 0.157 units. 
+
+ii. How strong is the relationship between the predictor and the response?
+Based on the R squared, which over 60%, we can say there's a strong relationship between mpg and horsepower.
+
+iv. What is the predicted mpg associated with a horsepower of 98? What are the associated 95 % confidence and prediction intervals?
+
+```{r}
+predict(fit, data.frame(horsepower = 98), interval = "confidence")
+```
+
+```{r}
+predict(fit, data.frame(horsepower = 98), interval = "prediction")
+```
+
+# Diagnostics 
+
+```{r}
+par(mfrow = c(1,1))
+plot(horsepower, mpg)
+abline(fit)
+```
+
+```{r}
+par(mfrow = c(2,2))
+plot(fit)
+```
+
+The plot of residuals versus fitted values indicates the presence of non linearity in the data. The plot of standardized residuals versus leverage indicates the presence of a few outliers (higher than 2 or lower than -2) and a few high leverage points.
+
+# Multiple Linear Regression
+
+```{r}
+pairs(Auto)
+```
+
+Let's look at the correlation
+
+```{r}
+cor(Auto[1:8])
+```
+
+```{r}
+fit = lm(mpg ~ . -name, data = Auto)
+summary(fit)
+```
+
+i. Is there a relationship between the predictors and the response?
+There appears to be relationship between the predictores and the response since we have F statistic of 252.2 and p-value less than 0.05. At least, one predictor is significant. (non -zero)
+
+ii. Which predictors appear to have a statistically significant relationship to the response?
+Displacement, weight, year and origin have a statitically significant relationship to the response. 
+
+iii. What does the coefficient for the year variable suggest?
+
+The coefficient for the year variable suggest that cars have become more efficient over time. 
+
+# Diagnostics
+
+```{r}
+par(mfrow = c(2,2))
+plot(fit)
+```
+

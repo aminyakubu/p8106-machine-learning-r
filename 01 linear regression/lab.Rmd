@@ -1,0 +1,283 @@
+---
+title: "Linear Regression"
+author: "Amin Yakubu"
+date: "1/28/2019"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(MASS)
+library(ISLR)
+library(car)
+```
+
+To demostrate the concepts of linear regression, I will use the advertising data which has `r nrow(advertising)` and `r ncol(advertising)`. The variables include advertising budget in thousands of dollars for `TV`, `radio` and `newspaper`. The `sales` has (in thousands) the number of unit of a product sold. 
+
+Some questions of interest include
+
+Is there a relationship between advertising budget and sales?
+How strong is the relationship between advertising budget and sales?
+Which media contribute to sales?
+How accurately can we estimate the effect of each medium on sales?
+How accurately can we predict future sales?
+Is the relationship linear?
+Is there synergy among the advertising media?
+
+
+```{r}
+advertising = read_csv("./data/advertising.csv") 
+  
+advertising = advertising %>% select(TV)
+```
+
+```{r}
+fit1 = lm(sales ~ TV + radio + newspaper, data = advertising)
+
+fit2 = lm(TV ~ newspaper + radio, data = advertising)
+
+residual = fit2$residuals
+
+fit3 = lm(sales ~ residual, data = advertising)
+
+```
+
+p-values
+```{r}
+set.seed(1)
+X = matrix(rnorm(20*200), 200, 20)
+
+summary(lm(dat$sales ~ X))
+```
+
+center the predictors
+```{r}
+advertising2 = advertising[,-1]
+advertising2 = data.frame(scale(advertising2, scale = FALSE)) %>% View
+lm(sales ~ -1 + TV + radio + newspaper, data = advertising2)
+```
+
+I will assess the linear regression fit using the residual standard error (RSE) -  average amount that the response will deviate from the true regression line -  and the R2 squared statistic. 
+
+# Simple Linear Regression
+
+Loading the data
+```{r}
+data("Boston")
+```
+
+The MASS library contains the Boston data set, which records `medv` (median house value) for 506 neighborhoods around Boston. We will seek to predict `medv` using 13 predictors such as `rm` (average number of rooms per house), `age` (average age of houses), and `lstat` (percent of households with low socioeconomic status)
+
+```{r}
+names(Boston)
+```
+
+Fitting the model 
+
+```{r}
+fit = lm(medv ~ lstat, data = Boston)
+
+summary(fit)
+
+names(fit)
+
+coef(fit)
+confint(fit)
+```
+
+# Prediction
+
+The `predict()` function can be used to produce confidence intervals and prediction intervals for the prediction of medv for a given value of `lstat`.
+
+```{r}
+predict(fit, data.frame(lstat = c(5,10,15)), interval = "confidence")
+```
+
+```{r}
+predict(fit, data.frame(lstat= c(5,10,15)), interval = "prediction")
+ 
+```
+
+We will now plot medv and lstat along with the least squares regression line using the plot() and abline() functions.
+
+```{r}
+attach(Boston)
+plot(lstat, medv)
+abline(fit)
+```
+
+The abline() function can be used to draw any line, not just the least squares regression line.
+Below we experiment with some additional settings for plotting lines and points.
+
+```{r}
+abline(fit,lwd = 3)
+
+abline(fit,lwd = 3,col = "red") 
+
+plot(lstat,medv, col = "red")
+
+plot(lstat, medv, pch = 20)
+
+plot(lstat,medv, pch = "+")
+
+plot(1:20, 1:20, pch = 1:20)
+```
+
+Diagnostics
+
+```{r}
+par(mfrow = c(2,2)) # 2 x 2 grid
+plot(fit)
+```
+
+we can compute the residuals from a linear regression fit using the residuals() function. The function rstudent() will return the studentized residuals, and we can use this function to plot the residuals against the fitted values.
+
+```{r}
+par(mfrow=c(1,1))
+plot(predict(fit), residuals(fit))
+plot(predict(fit), rstudent(fit))
+```
+
+On the basis of the residual plots, there is some evidence of non-linearity. Leverage statistics can be computed for any number of predictors using the hatvalues() function.
+
+```{r}
+plot(hatvalues(fit))
+which.max(hatvalues(fit)) # outputs the observation with the largest leverage statistic
+```
+
+Multiple Linear Regression
+
+```{r}
+mul_fit = lm(medv ~ lstat + age, data=Boston) 
+summary(mul_fit)
+```
+
+Fit all predictors
+
+```{r}
+mul_fit = lm(medv~ . ,data = Boston) 
+summary(mul_fit)
+```
+
+We can access the individual components of a summary object by name
+
+```{r}
+names(mul_fit)
+```
+
+R squared
+```{r}
+summary(mul_fit)$r.sq
+```
+
+RSE
+```{r}
+summary(mul_fit)$sigma
+```
+
+The vif() function, part of the car package, can be used to compute variance inflation factors
+
+```{r}
+vif(mul_fit)
+```
+
+Exclude a variable from the model fit
+
+```{r}
+mul_fit1 = lm(medv ~ . -age, data = Boston)
+summary(mul_fit1)
+```
+
+We can use the update function
+
+```{r}
+fit1=update(mul_fit, ~ .-age)
+```
+
+# interaction term
+
+It is easy to include interaction terms in a linear model using the `lm()` function. The syntax `lstat:black` tells R to include an interaction term between lstat and black. The syntax `lstat*age` simultaneously includes `lstat`, `age`, and the interaction term `lstat×age` as predictors; it is a shorthand for `lstat+age+lstat:age`.
+
+```{r}
+summary(lm(medv ~ lstat * age, data = Boston)) %>% broom::tidy()
+```
+
+# Non-linear Transformations of the Predictors
+
+The lm() function can also accommodate non-linear transformations of the predictors. For instance, given a predictor X, we can create a predictor X2 using I(X^2). The function I() is needed since the ^ has a special meaning
+in a formula; wrapping as we do allows the standard usage in R, which is I() to raise X to the power 2.
+
+```{r}
+fit2 = lm(medv ~ lstat + I(lstat^2)) 
+summary(fit2)
+```
+
+The near-zero p-value associated with the quadratic term suggests that it leads to an improved model. We use the `anova()` function to further quantify the extent to which the quadratic fit is superior to the linear fit.
+
+```{r}
+fit1=lm(medv ~ lstat)
+
+anova(fit1 ,fit2)
+```
+
+The `anova()` function performs a hypothesis test comparing the two models. The null hypothesis is that the two models fit the data equally well, and the alternative hypothesis is that the full model is superior. Here the F-statistic is 135 and the associated p-value is virtually zero. This provides very clear evidence that the model containing the predictors lstat and lstat2 is far superior to the model that only contains the predictor lstat. This is not surprising, since earlier we saw evidence for non-linearity in the relationship between medv and lstat.
+
+```{r}
+par(mfrow=c(2,2))
+plot(fit2)
+```
+
+we see that when the lstat2 term is included in the model, there is little discernible pattern in the residuals.
+
+In order to create a cubic fit, we can include a predictor of the form `I(X^3`). However, this approach can start to get cumbersome for higher- order polynomials. A better approach involves using the `poly()` function to create the polynomial within `lm()`
+
+```{r}
+fit5 = lm(medv ~ poly(lstat, 5)) 
+summary(fit5)
+plot(fit5)
+```
+
+This suggests that including additional polynomial terms, up to fifth order, leads to an improvement in the model fit! However, further investigation of the data reveals that no polynomial terms beyond fifth order have signifi- cant p-values in a regression fit.
+
+Here we try a log transformation
+
+```{r}
+summary(lm(medv ~ log(rm), data = Boston))
+```
+
+# Qualitative Predictors
+
+We will now examine the Carseats data, which is part of the ISLR library. We will attempt to predict Sales (child car seat sales) in 400 locations based on a number of predictors.
+
+```{r}
+data("Carseats")
+
+names(Carseats)
+```
+
+The Carseats data includes qualitative predictors such as Shelveloc, an in- dicator of the quality of the shelving location—that is, the space within a store in which the car seat is displayed—at each location. The pre- dictor Shelveloc takes on three possible values, Bad, Medium, and Good.
+
+Below we fit a multiple regression model that includes some interaction terms.
+
+```{r}
+fit = lm(Sales ~ . + Income:Advertising+Price:Age, data = Carseats)
+summary(fit)
+```
+
+The `contrasts()` function returns the coding that R uses for the dummy variables
+
+```{r}
+attach(Carseats)
+contrasts(ShelveLoc)
+```
+
+The fact that the coefficient for ShelveLocGood in the regression output is positive indicates that a good shelving location is associated with high sales (relative to a bad location)
+
+```{r}
+
+```
+
