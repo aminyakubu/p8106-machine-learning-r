@@ -277,7 +277,3 @@ contrasts(ShelveLoc)
 
 The fact that the coefficient for ShelveLocGood in the regression output is positive indicates that a good shelving location is associated with high sales (relative to a bad location)
 
-```{r}
-
-```
-

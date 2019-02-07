@@ -60,6 +60,7 @@ plot(fit)
 
 The plot of residuals versus fitted values indicates the presence of non linearity in the data. The plot of standardized residuals versus leverage indicates the presence of a few outliers (higher than 2 or lower than -2) and a few high leverage points.
 
+# Question 9
 # Multiple Linear Regression
 
 ```{r}
@@ -93,4 +94,257 @@ The coefficient for the year variable suggest that cars have become more efficie
 par(mfrow = c(2,2))
 plot(fit)
 ```
+
+```{r}
+plot(fit)
+
+```
+
+# Interaction 
+
+```{r}
+a = Auto[1:8]
+
+fit_interaction = lm(mpg ~  .*. , data = a) 
+
+
+summary(fit_interaction)
+```
+
+Question 10
+
+```{r}
+data("Carseats")
+```
+
+Fit a multiple regression model to predict Sales using Price, Urban, and US.
+
+```{r}
+attach(Carseats)
+fit = lm(Sales ~ Price + Urban + US)
+
+summary(fit)
+```
+
+For every one 1 dollar increase in price of car seat, sales decreases by 54.4 dollars on average, adjusting for Urban and US
+On average, sales in Urban areas is 21.9 dollars less, adusting for Price and US. On average sales in the US is 1200.57 dollars higher adjusting for Price and Urban. 
+
+Fitting a model with only the significant variables. 
+
+```{r}
+fit1 = lm(Sales ~ Price + US)
+summary(fit1)
+```
+
+The R squared for the smaller model is better. 
+
+Confidence intervals
+```{r}
+confint(fit)
+```
+
+evidence of outliers or high leverage observations
+
+```{r}
+plot(fit)
+```
+
+Question 11 
+In this problem we will investigate the t-statistic for the null hypothesis H0 : β = 0 in simple linear regression without an intercept
+
+```{r}
+set.seed(1)
+x = rnorm(100)
+y = 2 * x + rnorm(100)
+```
+
+Regression of y on x without the intercept
+
+```{r}
+fit = lm(y ~ x + 0)
+summary(fit)
+```
+
+beta coefficient = 1.9939  Standard error = 0.1065 and t value = 18.73
+
+Regression of x on y without the intercept
+
+```{r}
+fit1 = lm(x ~ y + 0)
+summary(fit1)
+```
+
+beta = 0.39111 standard error = 0.02089  t value = 18.73
+
+We obtain the same value for the t-statistic and consequently the same value for the corresponding p-value. Both results in (a) and (b) reflect the same line created in (a). In other words, y=2x+ε could also be written x=0.5(y−ε).
+
+Regression with intercept
+```{r}
+summary(lm(y ~ x))
+```
+
+```{r}
+summary(lm(x ~ y))
+```
+
+In this case, the t statistic are equal
+
+Question 12
+Under what circumstance is the coefficient estimate for the regression of X onto Y the same as the coefficient estimate for the regression of Y onto X
+
+When the sum of the squares of the observed y-values are equal to the sum of the squares of the observed x-values.
+
+Generate an example in R with n = 100 observations in which the coefficient estimate for the regression of X onto Y is different from the coefficient estimate for the regression of Y onto X
+```{r}
+set.seed(1)
+
+x = rnorm(100)
+y = 2*x
+
+summary(lm(y ~ x + 0))
+summary(lm(x ~ y + 0))
+
+```
+
+Generate an example in R with n = 100 observations in which the coefficient estimate for the regression of X onto Y is the same as the coefficient estimate for the regression of Y onto X.
+
+```{r}
+set.seed(1)
+
+x = rnorm(100)
+y = sample(x, 100)
+
+g = data.frame(x = x, y = y)
+
+ggplot(aes(x = g$x, y = g$y), data = g) + geom_point() + geom_line()
+
+sum(x^2)
+sum(y^2)
+```
+
+```{r}
+summary(lm(y ~ x))
+summary(lm(x ~ y))
+```
+
+Question 13
+
+```{r}
+x = rnorm(100)
+esp = rnorm(100, 0,sqrt(0.25))
+y = -1 + 0.5 * x + esp
+
+```
+y is of length 100. β0 is -1, β1 is 0.5
+
+```{r}
+par(mfrow = c(1,1))
+plot(x, y)
+```
+
+```{r}
+fit = lm(y ~ x)
+summary(fit)
+```
+beta0 hat = - 0.98 and beta1 hat = 0.55
+The linear regression fits a model close to the true value of the coefficients as was constructed. The model has a large F-statistic with a near-zero p-value so the null hypothesis can be rejected.
+
+Display the least squares line on the scatterplot obtained in (d). Draw the population regression line on the plot, in a different color. Use the legend() command to create an appropriate legend.
+
+```{r}
+plot(x, y)
+abline(fit, lwd = 3, col = 2)
+abline(-1, 0.5, lwd = 3, col = 3)
+legend(-1, legend = c("model fit", "pop. regression"), col = 2:3, lwd = 3)
+```
+
+Now fit a polynomial regression model that predicts y using x and x2. Is there evidence that the quadratic term improves the model fit?
+
+```{r}
+fit1 = lm(y ~ x + I(x^2))
+summary(fit1)
+```
+There is evidence that model fit has increased over the training data given the slight increase in R2 and RSE. Although, the p-value of the t-statistic suggests that there isn’t a relationship between y and x2.
+
+Repeat after modifying the data generation process in such a way that there is less noise in the data. The model (3.39) should remain the same. You can do this by decreasing the vari- ance of the normal distribution used to generate the error term ε 
+
+```{r}
+x1 = rnorm(100)
+esp1 = rnorm(100, 0, 0.1)
+y1 = -1 + 0.5 * x1 + esp1
+
+```
+
+```{r}
+par(mfrow = c(1,1))
+plot(x1, y1)
+```
+
+```{r}
+fit1 = lm(y1 ~ x1)
+summary(fit1)
+```
+
+Repeat after modifying the data generation process in such a way that there is more noise in the data. The model (3.39) should remain the same. You can do this by increasing the variance of the normal distribution used to generate the error term ε 
+
+```{r}
+x2 = rnorm(100)
+esp2 = rnorm(100, 0, 1)
+y2 = -1 + 0.5 * x2 + esp2
+
+```
+
+```{r}
+par(mfrow = c(1,1))
+plot(x2, y2)
+```
+
+```{r}
+fit2 = lm(y2 ~ x2)
+summary(fit2)
+```
+
+What are the confidence intervals for β0 and β1 based on the original data set, the noisier data set, and the less noisy data set? 
+
+```{r}
+confint(fit)
+confint(fit1)
+confint(fit2)
+```
+
+All intervals seem to be centered on approximately 0.5, with the second fit’s interval being narrower than the first fit’s interval and the last fit’s interval being wider than the first fit’s interval.
+
+
+Question 14 - Problem of collinearity
+
+```{r}
+set.seed(1)
+x1 = runif(100)
+x2 = 0.5 * x1 + rnorm(100)/10
+y = 2 + 2 * x1 + 0.3 * x2 + rnorm(100)
+```
+The last line corresponds to creating a linear model in which y is a function of x1 and x2
+
+What is the correlation between x1 and x2? Create a scatterplot displaying the relationship between the variables.
+
+```{r}
+cor(x1, x2)
+```
+
+correlation =  0.8351212
+
+```{r}
+plot(x1, x2)
+```
+
+Using this data, fit a least squares regression to predict y using x1 and x2
+
+```{r}
+fit = lm(y ~ x1 + x2)
+summary(fit)
+```
+
+The coefficients β̂0, β 1 and β̂2 are respectively 2.1304996, 1.4395554 and 1.0096742. Only β̂ 0 is close to β0. As the p-value is less than 0.05 we may reject H0 for β1, however we may not reject H0 for β2 as the p-value is higher than 0.05.
+
+
 

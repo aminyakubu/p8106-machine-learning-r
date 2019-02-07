@@ -1,0 +1,200 @@
+---
+title: "Cross-validation and Bootstrapping"
+output: github_document
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, echo = T, message = FALSE}
+library(caret)
+library(boot)
+```
+
+# Cross-validation
+You can generate a simulated training dataset or use an existing dataset. For illustration, we use a simulated dataset with two predictors.
+```{r}
+# Generate the data, you can replace this with your own function
+gen_data <- function(N)
+{
+  X <- rnorm(N, mean = 1)
+  X2 <- rnorm(N, mean = 1)
+  eps <- rnorm(N, sd = .5)
+  Y <- X + X2 + eps
+  data.frame(Y = Y, X = X, X2 = X2)
+}
+
+set.seed(1)
+# generate training data
+N <- 200
+trainData <- gen_data(N)
+```
+
+The function `featurePlot()` in `caret` is a wrapper for different lattice plots to visualize the data. The various graphical parameters (color, line type, background, etc) that control the look of Trellis displays are highly customizable. You can explore `trellis.par.set()` after class.
+
+```{r, fig.height = 4}
+theme1 <- trellis.par.get()
+theme1$plot.symbol$col <- rgb(.2, .4, .2, .5)
+theme1$plot.symbol$pch <- 16
+theme1$plot.line$col <- rgb(.8, .1, .1, 1)
+theme1$plot.line$lwd <- 2
+theme1$strip.background$col <- rgb(.0, .2, .6, .2)
+
+trellis.par.set(theme1)
+featurePlot(x = trainData[,(2:3)], 
+            y = trainData[,1], 
+            plot = "scatter",  # you can use pairs
+            labels = c("Predictors","Y"),
+            type = c("p", "smooth"),
+            span = .5, # controls the smoothness of the curve
+            layout = c(2, 1))
+```
+
+### The validation set approach
+
+The function `createDataPartition()` creates test/training or test/validation partitions.
+```{r}
+trRows <- createDataPartition(trainData$Y, times = 1, # This the number of partitions
+                              p = .50,
+                              list = FALSE)
+
+fit_tr <- lm(Y~., data = trainData[trRows,])
+
+pred_va <- predict(fit_tr, trainData[-trRows,])
+
+# validation set error
+mean((pred_va-trainData$Y[-trRows])^2)
+```
+
+### K-fold CV
+
+#### Approach 1
+The function `createFolds()` splits the data into k groups. `returnTrain = TRUE` means the values returned are the sample positions corresponding to the data used during training.
+
+```{r}
+cvSplits <- createFolds(trainData$Y, 
+                        k = 10, 
+                        returnTrain = TRUE)
+
+str(cvSplits)
+```
+
+Calculate the cross-validation MSE for model 1 (`Y~X`) and model 2 (`Y~X+X2`).
+
+```{r}
+K <- 10
+mseK1 <- rep(NA, K)
+mseK2 <- rep(NA, K)
+
+for (k in 1:K)
+{
+  trRows <- cvSplits[[k]]
+  
+  fit_tr1 <- lm(Y~X, data = trainData[trRows,])
+  mseK1[k] <- mean((predict(fit_tr1, trainData[-trRows,]) - trainData$Y[-trRows])^2)
+  
+  fit_tr2 <- lm(Y~X+X2, data = trainData[trRows,])
+  mseK2[k] <- mean((predict(fit_tr2, trainData[-trRows,]) - trainData$Y[-trRows])^2)
+}
+# K-fold MSE
+c(mean(mseK1), mean(mseK2))
+```
+
+#### Approach 2 (recommended)
+Calculate the 10-fold CV MSE using the function `train()`.
+
+```{r}
+# 10-fold CV
+ctrl1 <- trainControl(method = "cv", number = 10)
+
+# other options
+ctrl2 <- trainControl(method = "LOOCV")
+ctrl3 <- trainControl(method = "none") # only fits one model to the entire training set
+ctrl4 <- trainControl(method = "boot632")
+ctrl5 <- trainControl(method = "repeatedcv", repeats = 5) 
+ctrl6 <- trainControl(method = "LGOCV") 
+
+set.seed(1)
+lmFit2 <- train(Y~., 
+                data = trainData, 
+                method = "lm", 
+                trControl = ctrl1)
+lmFit2
+
+set.seed(1)
+lmFit1 <- train(Y~X, 
+                data = trainData,
+                method = "lm", 
+                trControl = ctrl1)
+lmFit1
+```
+
+To compare these two models based on their cross-validation statistics, the `resamples()` function can be used with models that share a common set of resampled data sets.
+
+```{r}
+resamp <- resamples(list(lm1 = lmFit1, lm2 = lmFit2))
+summary(resamp)
+```
+
+```{r}
+modelDifferences <- diff(resamp) # The is doing paired t test to see if they are different
+summary(modelDifferences)
+```
+
+# Bootstrapping
+
+Estimate distribution of $\widehat{\beta}_{1}$ by resampling from the true population (if you know the truth!).
+```{r}
+N <- 400
+trainData <- gen_data(N)
+B <- 1000
+beta1 <- rep(NA, B)
+for(b in 1:B)
+{
+  fitb <- lm(Y~., data = gen_data(N))
+  beta1[b] <- fitb$coef[2]
+}
+sd(beta1)
+```
+
+
+
+### Bootstrap using a for loop
+```{r}
+beta1B <- rep(NA, B)
+for(b in 1:B)
+{
+  ind <- sample(1:N, size = N, replace = TRUE)
+  datab <- trainData[ind,]
+  fitb <- lm(Y~., data = datab)
+  beta1B[b] <- fitb$coef[2]
+}
+sd(beta1B)
+```
+
+```{r pressure, echo=FALSE, fig.height=4, fig.width=4}
+par(mfrow = c(1,2))
+hist(beta1, freq = FALSE)
+hist(beta1B, freq = FALSE)
+```
+
+### Bootstrap using boot()
+```{r}
+fun <- function(data, ind) 
+# The first argument passed will be the original data
+# The second will be a vector of indices that define the bootstrap sample
+{
+  data2 <- data[ind,]
+  fit <- lm(Y~., data = data2)
+  fit$coef[2]
+}
+
+
+beta1_boot <- boot(trainData, statistic = fun, R = 1000)
+sd(beta1_boot$t)
+```
+
+
+
+
