@@ -1,0 +1,12 @@
+---
+title: "Linear Model Selection & Regularization"
+author: "Amin Yakubu"
+date: "2/13/2019"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
