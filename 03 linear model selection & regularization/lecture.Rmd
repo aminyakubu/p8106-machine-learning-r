@@ -1,0 +1,204 @@
+---
+title: "Ridge Regression & Lasso"
+author: "Amin Yakubu"
+date: "2/13/2019"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, echo = T, message = FALSE, results='hide', warning=FALSE}
+library(ISLR)
+library(glmnet) # For lasso, ridge & elastic net
+library(caret) # for train function
+library(corrplot) # For correlation plot
+library(plotmo) # for trace plot. glmnet can also produce plots but this one is better
+```
+
+Predict a baseball player’s salary on the basis of various statistics associated with performance in the previous year. Use `?Hitters` for more details.
+
+```{r}
+data(Hitters)
+# delete rows containing the missing data
+Hitters <- na.omit(Hitters)
+
+# matrix of predictors (glmnet uses input matrix). We specify the response and use . the specify all predictors
+x <- model.matrix(Salary ~ . , Hitters)[,-1] # we delete the intercept (which is the first column)
+
+# vector of response
+y <- Hitters$Salary
+
+corrplot(cor(x), method = 'square') # method is optional
+
+```
+
+## Ridge regression using `glmnet()`
+
+`alpha` is the elasticnet mixing parameter. The penalty on the coefficient vetor for predictor $j$ is $(1-\alpha)/2||\beta_j||_2^2+\alpha||\beta_j||_1$. `alpha=1` is the lasso penalty, and `alpha=0` the ridge penalty. `glmnet()` function standardizes the variables by default. `ridge.mod` contains the coefficient estimates for a set of lambda values. The grid for lambda is in `ridge.mod$lambda`. 
+
+```{r}
+# fit the ridge regression (alpha = 0) with a sequence of lambdas
+ridge.mod <- glmnet(x, y, alpha = 0, lambda = exp(seq(-1, 10, length = 100))) # 100 you will have 100 solutions. 
+# default here is standardized. 
+# set alpha = 0 for ridge
+# set alpha = 1 for lasso
+# lambda is trying different values. Alternatively use nlambda = 100. It will choose the values automatically
+# another function standardize = TRUE meaning you will center you predictors and outcome
+
+ridge.mod$lambda
+```
+
+`coef(ridge.mod)` gives the coefficient matrix. Each column is the fit corresponding to one lambda value.
+
+```{r}
+mat.coef <- coef(ridge.mod)
+dim(mat.coef)
+```
+
+### Cross-validation
+
+We use cross-validation to determine the optimal value of lambda. The two vertical lines are the for minimal MSE and 1SE rule. The 1SE rule gives the model with fewest coefficients that's less than one SE away from the sub-model with the lowest error.
+```{r}
+set.seed(2)
+cv.ridge <- cv.glmnet(x, y, 
+                      alpha = 0, 
+                      lambda = exp(seq(-1, 10, length = 100)), 
+                      type.measure = "mse")
+
+# here alpha = 0, meaning ridge
+# type.measure the metric to decide the best model. 
+
+plot(cv.ridge)
+# the redline is the mse for each lambda value
+# we also see the mse + SE and mse - SE
+# the first dashed line shows the optimal value for lambda
+# second dashed line is the 1 standared error rule - gives the model with the fewest coefficients. Another good model esp if you want few parameters. It depends on your own choice. They are both good.
+```
+
+### Trace plot
+
+There are two functions for generating the trace plot.
+```{r}
+plot(ridge.mod, xvar = "lambda", label = TRUE)
+
+plot_glmnet(ridge.mod, xvar = "rlambda", label = 19) # label = 10 is the defaul
+```
+
+### Coefficients of the final model
+
+Get the coefficients of the optimal model. `s` is value of the penalty parameter `lambda` at which predictions are required.
+```{r}
+best.lambda <- cv.ridge$lambda.min # cv.ridge$labmda.1se gives you the other optimal value on the other side of the plot
+best.lambda
+
+predict(ridge.mod, s = best.lambda, type = "coefficients") # the coefficents are on the original scale -- not scaled
+# use type = 'response' for homework. and also use newx = to a matrix. So it will return a vector of predicted responses
+```
+
+
+## Lasso using `glmnet()`
+
+The syntax is along the same line as ridge regression. Now we use `alpha = 1`.
+```{r}
+cv.lasso <- cv.glmnet(x,y, alpha = 1, lambda = exp(seq(-1, 5, length = 100)))
+cv.lasso$lambda.min
+
+# alpha = 1 is lasso and alpha = 0 is ridge
+
+```
+
+
+```{r}
+plot(cv.lasso)
+
+# shows the number of non zero coefficents. Look at the numbers on top of the model
+```
+
+
+```{r}
+# cv.lasso$glmnet.fit is a fitted glmnet object for the full data
+# You can also plot the result obtained from glmnet()
+plot(cv.lasso$glmnet.fit, xvar = "lambda", label = TRUE)
+plot_glmnet(cv.lasso$glmnet.fit)
+```
+
+
+```{r}
+predict(cv.lasso, s = "lambda.min", type = "coefficients")
+# you can also use the actual number for s
+```
+
+## Ridge and lasso using `caret`
+
+```{r}
+ctrl1 <- trainControl(method = "repeatedcv", number = 10, repeats = 5)
+# you can try other options
+
+set.seed(2)
+ridge.fit <- train(x, y,
+                     method = "glmnet",
+                     tuneGrid = expand.grid(alpha = 0, 
+                                            lambda = exp(seq(-1, 10, length = 100))),
+                   # preProc = c("center", "scale"),
+                     trControl = ctrl1)
+# preProc was not used because that's the default for glmnet. Other methods it may not be the default
+
+plot(ridge.fit)
+plot(ridge.fit, xTrans = function(x) log(x)) # here were are plotting log lambda so it looks like the previous plots
+
+names(ridge.fit)
+ridge.fit$bestTune
+
+coef(ridge.fit$finalModel, ridge.fit$bestTune$lambda)
+
+# you can use predict on the ridge.fit$finalModel. Because ridge.fit$finalModel is a glmnet object
+```
+
+```{r}
+set.seed(2)
+lasso.fit <- train(x, y,
+                     method = "glmnet",
+                     tuneGrid = expand.grid(alpha = 1, 
+                                            lambda = exp(seq(-1, 5, length = 100))),
+                   # preProc = c("center", "scale"),
+                     trControl = ctrl1)
+
+plot(lasso.fit, xTrans = function(x) log(x))
+
+lasso.fit$bestTune
+
+coef(lasso.fit$finalModel,lasso.fit$bestTune$lambda)
+```
+
+```{r}
+set.seed(2)
+enet.fit <- train(x, y,
+                     method = "glmnet",
+                     tuneGrid = expand.grid(alpha = seq(0, 1, length = 5), 
+                                            # We are seeing if alpha between 0 and 1 is better
+                                            lambda = exp(seq(-2, 4, length = 50))),
+                   # preProc = c("center", "scale"),
+                     trControl = ctrl1)
+
+# for each alpha we have 50 lambdas. 
+enet.fit$bestTune
+
+ggplot(enet.fit)
+```
+
+
+```{r, fig.width=5}
+set.seed(2)
+lm.fit <- train(x, y,
+                method = "lm",
+                trControl = ctrl1)
+
+resamp <- resamples(list(lasso = lasso.fit, ridge = ridge.fit, lm = lm.fit, enet = enet.fit)) # here we can compare the models
+summary(resamp)
+
+parallelplot(resamp, metric = "RMSE") # There are 50 curves showing the performances of the 4 models
+
+bwplot(resamp, metric = "RMSE") # here we used a box plot
+```

@@ -9,4 +9,92 @@ output: github_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+```{r}
+library(ISLR)
+library(tidyverse)
+```
+
+# Lab 1: Subset Selection Methods
+
+### Best Subset Selection
+
+```{r}
+data("Hitters")
+fix(Hitters)
+names(Hitters)
+```
+
+Checking for missing variables
+
+```{r}
+sum(is.na(Hitters$Salary))
+```
+
+```{r}
+Hitters = na.omit(Hitters) 
+dim(Hitters)
+
+sum(is.na(Hitters))
+```
+
+The regsubsets() function (part of the leaps library) performs best subset selection by identifying the best model that contains a given number of predictors, where best is quantified using RSS. The syntax is the same as for lm(). The summary() command outputs the best set of variables for each model size
+
+```{r}
+library(leaps)
+
+regfit.full = regsubsets(Salary ~ . , Hitters)
+
+summary(regfit.full)
+```
+
+For instance, this output indicates that the best two-variable model contains only Hits and CRBI.
+
+By default, regsubsets() only reports results up to the best eight-variable model. But the nvmax option can be used in order to return as many variables as are desired. Here we fit up to a 19-variable model.
+
+```{r}
+regfit.full = regsubsets(Salary ~.,data = Hitters, nvmax = 19) 
+reg.summary = summary(regfit.full)
+```
+
+The summary() function also returns R2, RSS, adjusted R2, Cp, and BIC. We can examine these to try to select the best overall model
+
+```{r}
+names(reg.summary)
+```
+
+```{r}
+reg.summary$rsq
+```
+
+For instance, we see that the R2 statistic increases from 32 %, when only one variable is included in the model, to almost 55%, when all variables are included. As expected, the R2 statistic increases monotonically as more variables are included.
+
+Plotting RSS, adjusted R2, Cp, and BIC for all of the models at once will help us decide which model to select. Note the type="l" option tells R to connect the plotted points with lines.
+
+```{r}
+par(mfrow = c(2,2))
+plot(reg.summary$rss, xlab = "Number of Variables ", ylab = "RSS", type = "l")
+plot(reg.summary$adjr2 ,xlab = "Number of Variables ", ylab = "Adjusted RSq", type = "l")
+```
+
+The points() command works like the plot() command, except that it puts points on a plot that has already been created, instead of creating a new plot. The which.max() function can be used to identify the location of the maximum point of a vector
+
+```{r}
+which.max(reg.summary$adjr2)
+```
+
+```{r}
+points(11, reg.summary$adjr2[11], col = "red",cex = 2,pch = 20)
+```
+
+```{r}
+plot(reg.summary$cp, xlab = "Number of Variables ", ylab = "Cp", type = 'l')
+which.min(reg.summary$cp )
+
+points(10,reg.summary$cp[10], col = "red", cex = 2, pch = 20)
+which.min(reg.summary$bic)
+
+plot(reg.summary$bic,xlab = "Number of Variables ",ylab = "BIC", type = 'l')
+points(6, reg.summary$bic[6], col = "red",cex = 2, pch = 20)
+```
+
 
