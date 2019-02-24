@@ -1,5 +1,5 @@
 ---
-title: "Linear Model Selection & Regularization"
+title: "Linear Model Selection"
 author: "Amin Yakubu"
 date: "2/13/2019"
 output: github_document
@@ -20,7 +20,6 @@ library(tidyverse)
 
 ```{r}
 data("Hitters")
-fix(Hitters)
 names(Hitters)
 ```
 
@@ -192,7 +191,7 @@ Our function pretty much mimics what we did above. The only complex part is how 
 
 Finally, we perform best subset selection on the full data set, and select the best ten-variable model. It is important that we make use of the full data set in order to obtain more accurate coefficient estimates. 
 
-**Note that we perform best subset selection on the full data set and select the best ten- variable model, rather than simply using the variables that were obtained from the training set, because the best ten-variable model on the full data set may differ from the corresponding model on the training set. **
+Note that we perform best subset selection on the full data set and select the best ten- variable model, rather than simply using the variables that were obtained from the training set, because the best ten-variable model on the full data set may differ from the corresponding model on the training set. 
 
 ```{r}
 regfit.best = regsubsets(Salary ~ .,data = Hitters, nvmax = 19)
