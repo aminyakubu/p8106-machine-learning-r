@@ -1,0 +1,172 @@
+---
+title: "Homework 1"
+author: "Amin Yakubu"
+date: "2/23/2019"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(warning = F)
+knitr::opts_chunk$set(message = F)
+```
+
+```{r}
+library(tidyverse)
+library(glmnet)
+library(caret)
+library(corrplot)
+library(plotmo)
+library(pls)
+```
+
+# Data 
+
+```{r}
+train = read_csv('./data/solubility_train.csv')
+test = read_csv('./data/solubility_test.csv')
+```
+
+The data has been divided into training and testing. The testing data has 951 observations and the test data has 356 observations. There are `r ncol(train)` predictors. `r sum(apply(train,2,function(x) { all(x %in% 0:1) }))` are binary variables that indicate the presence or absence of a particular chemical substructure, 16 are count descriptors, such as the number of bonds or the number of bromine atoms, and 4 are continuous descriptors, such as molecular weight or surface area. The response is in the column `Solubility` which is a continuous variable
+
+
+```{r}
+# Checking for missing values
+missing_train <- sapply(train, function(x) sum(is.na(x)))
+missing_train[missing_train > 0]
+
+missing_test <- sapply(test, function(x) sum(is.na(x)))
+missing_test[missing_test > 0]
+```
+
+No missing data 
+
+```{r}
+plot(train$Solubility)
+```
+
+# Linear Model
+
+```{r}
+lm.fit = lm(Solubility ~ ., data = train)
+summary(lm.fit)
+```
+
+# Mean square error using the test data
+
+```{r}
+lm.pred = predict(lm.fit, newdata = test[,-ncol(test)])
+
+mean((lm.pred - test$Solubility)^2)
+```
+
+The mean square error using the test data is 0.55589. 
+
+Data processing 
+```{r}
+#Training set
+X.train = model.matrix(Solubility ~ ., train)[,-1]
+y.train = train$Solubility
+
+#Testing set
+X.test = model.matrix(Solubility ~ ., test)[,-1]
+y.test = test$Solubility
+
+```
+
+Fit a ridge regression model on the training data, with λ chosen by cross-validation. Report the test error
+
+```{r}
+ctrl1 <- trainControl(method = "repeatedcv", number = 10, repeats = 5)
+
+set.seed(1)
+ridge.fit <- train(X.train, y.train,
+                     method = "glmnet",
+                     tuneGrid = expand.grid(alpha = 0, 
+                                            lambda = exp(seq(-10,10, length = 200))),
+                     trControl = ctrl1)
+
+plot(ridge.fit)
+plot(ridge.fit, xTrans = function(x) log(x)) # here were are plotting log lambda so it looks like the previous plots
+
+ridge.fit$bestTune
+
+```
+
+```{r}
+bestlam.ridge = ridge.fit$lambda.min
+bestlam.ridge
+```
+
+```{r}
+ridge.pred = predict(ridge.fit$finalModel, s = bestlam.ridge, newx = X.test)
+mean((ridge.pred - y.test)^2)
+```
+
+The mean test error is 0.51346
+
+# The Lasso
+
+```{r}
+ctrl1 <- trainControl(method = "repeatedcv", number = 10, repeats = 5)
+
+set.seed(1)
+lasso.fit <- train(X.train, y.train,
+                     method = "glmnet",
+                     tuneGrid = expand.grid(alpha = 1, 
+                                            lambda = exp(seq(-10,10, length = 200))),
+                     trControl = ctrl1)
+
+plot(lasso.fit)
+plot(lasso.fit, xTrans = function(x) log(x)) # here were are plotting log lambda so it looks like the previous plots
+
+names(lasso.fit)
+lasso.fit$bestTune
+```
+
+```{r}
+bestlam.lasso = lasso.fit$bestTune$lambda
+bestlam.lasso
+```
+
+```{r}
+lasso.pred = predict(lasso.fit$finalModel, s = bestlam.lasso, newx = X.test)
+mean((lasso.pred - y.test)^2)
+```
+
+The mean error is 0.4987. 
+
+```{r}
+lasso.coef = predict(lasso.fit$finalModel, type = "coefficients", s = bestlam.lasso)[1:ncol(train),]
+length(lasso.coef)
+```
+
+```{r}
+length(lasso.coef[lasso.coef != 0])
+```
+
+There are 144 non-zero coefficient 
+
+# PCR 
+
+```{r}
+ctrl1 <- trainControl(method = "repeatedcv", number = 10, repeats = 5)
+
+set.seed(2)
+pcr.fit <- train(X.train, y.train,
+                  method = "pcr",
+                  tuneLength = 228,
+                  trControl = ctrl1,
+                  scale = TRUE)
+
+pred.pcr <- predict(pcr.fit$finalModel, newdata = X.test, 
+                       ncomp = pcr.fit$bestTune$ncomp)
+
+mean((pred.pcr - y.test)^2)
+
+ggplot(pcr.fit, highlight = TRUE) + theme_bw()
+
+```
+
+
+

@@ -1,0 +1,11 @@
+---
+title: "Exercises"
+author: "Amin Yakubu"
+date: "2/23/2019"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+

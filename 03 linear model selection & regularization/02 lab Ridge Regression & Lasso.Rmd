@@ -108,7 +108,7 @@ mean((ridge.pred - y.test)^2)
 The test MSE is 101037. Note that if we had instead simply fit a model with just an intercept, we would have predicted each test observation using the mean of the training observations. In that case, we could compute the test set MSE like this:
 
 ```{r}
-mean((mean(y[train])-y.test)^2)
+mean((mean(y[train]) - y.test)^2)
 ```
 
 We could also get the same result by fitting a ridge regression model with a very large value of λ. 
