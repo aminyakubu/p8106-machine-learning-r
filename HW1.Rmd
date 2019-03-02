@@ -45,23 +45,6 @@ No missing data
 plot(train$Solubility)
 ```
 
-# Linear Model
-
-```{r}
-lm.fit = lm(Solubility ~ ., data = train)
-summary(lm.fit)
-```
-
-# Mean square error using the test data
-
-```{r}
-lm.pred = predict(lm.fit, newdata = test[,-ncol(test)])
-
-mean((lm.pred - test$Solubility)^2)
-```
-
-The mean square error using the test data is 0.55589. 
-
 Data processing 
 ```{r}
 #Training set
@@ -72,18 +55,31 @@ y.train = train$Solubility
 X.test = model.matrix(Solubility ~ ., test)[,-1]
 y.test = test$Solubility
 
+ctrl1 <- trainControl(method = "repeatedcv", number = 10, repeats = 5)
 ```
 
-Fit a ridge regression model on the training data, with λ chosen by cross-validation. Report the test error
+## Question 1 -- Linear Model 
 
 ```{r}
-ctrl1 <- trainControl(method = "repeatedcv", number = 10, repeats = 5)
+set.seed(2)
+lm.fit <- train(X.train, y.train,
+                method = "lm",
+                trControl = ctrl1)
 
-set.seed(1)
+pred.lm <- predict(lm.fit$finalModel, newdata = data.frame(X.test))
+
+mean((pred.lm - y.test)^2)
+```
+
+
+## Question 2 -- Ridge Regression
+
+```{r}
+set.seed(2)
 ridge.fit <- train(X.train, y.train,
                      method = "glmnet",
                      tuneGrid = expand.grid(alpha = 0, 
-                                            lambda = exp(seq(-10,10, length = 200))),
+                                            lambda = exp(seq(-10, 10, length = 200))),
                      trControl = ctrl1)
 
 plot(ridge.fit)
@@ -94,7 +90,7 @@ ridge.fit$bestTune
 ```
 
 ```{r}
-bestlam.ridge = ridge.fit$lambda.min
+bestlam.ridge = ridge.fit$bestTune$lambda
 bestlam.ridge
 ```
 
@@ -105,12 +101,10 @@ mean((ridge.pred - y.test)^2)
 
 The mean test error is 0.51346
 
-# The Lasso
+## Question 3 -- The Lasso
 
 ```{r}
-ctrl1 <- trainControl(method = "repeatedcv", number = 10, repeats = 5)
-
-set.seed(1)
+set.seed(2)
 lasso.fit <- train(X.train, y.train,
                      method = "glmnet",
                      tuneGrid = expand.grid(alpha = 1, 
@@ -120,8 +114,6 @@ lasso.fit <- train(X.train, y.train,
 plot(lasso.fit)
 plot(lasso.fit, xTrans = function(x) log(x)) # here were are plotting log lambda so it looks like the previous plots
 
-names(lasso.fit)
-lasso.fit$bestTune
 ```
 
 ```{r}
@@ -147,11 +139,9 @@ length(lasso.coef[lasso.coef != 0])
 
 There are 144 non-zero coefficient 
 
-# PCR 
+## Question 4 -- PCR 
 
 ```{r}
-ctrl1 <- trainControl(method = "repeatedcv", number = 10, repeats = 5)
-
 set.seed(2)
 pcr.fit <- train(X.train, y.train,
                   method = "pcr",
@@ -168,5 +158,16 @@ ggplot(pcr.fit, highlight = TRUE) + theme_bw()
 
 ```
 
+Question 5 -- Discussion 
+
+```{r}
+resamp <- resamples(list(lasso = lasso.fit, 
+                         ridge = ridge.fit, 
+                         pcr = pcr.fit,
+                         lm = lm.fit))
+summary(resamp)
+
+bwplot(resamp, metric = "RMSE")
+```
 
 

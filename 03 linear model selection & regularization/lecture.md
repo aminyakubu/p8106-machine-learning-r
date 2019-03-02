@@ -449,7 +449,7 @@ Predict a baseball player’s salary on the basis of various statistics associat
 
 Ideally, a model should be evaluated on datasets that were not used to build or fine-tune the model, so that they provide an unbiased sense of model effectiveness. When a large amount of data is at hand, a set of samples can be set aside to evaluate the final model. However, when the number of samples is not large, a test set may be avoided because every sample may be needed for model building. Moreover, the size of the test set may not have sufficient power or precision to make reasonable judgements.
 
-Last time we use all the data to build the models. This time we split the data into a training set and a test set.
+Last time we used all the data to build the models. This time we split the data into a training set and a test set.
 
 ``` r
 data(Hitters)
