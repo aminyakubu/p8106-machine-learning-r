@@ -2,7 +2,7 @@
 title: "Homework 1"
 author: "Amin Yakubu"
 date: "2/23/2019"
-output: github_document
+output: pdf_document
 ---
 
 ```{r setup, include=FALSE}
@@ -42,7 +42,7 @@ missing_test[missing_test > 0]
 No missing data 
 
 ```{r}
-plot(train$Solubility)
+hist(train$Solubility)
 ```
 
 Data processing 
@@ -158,6 +158,8 @@ ggplot(pcr.fit, highlight = TRUE) + theme_bw()
 
 ```
 
+The mean test error is 0.54055
+
 Question 5 -- Discussion 
 
 ```{r}
@@ -170,4 +172,4 @@ summary(resamp)
 bwplot(resamp, metric = "RMSE")
 ```
 
-
+RMSE is minimum for the lasso compared to Rigde, PCR and linear method. This means the the coefficient for some of the predictors are truly zero. For this particular dataset, the Lasso provides best fit. 
