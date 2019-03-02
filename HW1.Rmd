@@ -13,11 +13,7 @@ knitr::opts_chunk$set(message = F)
 
 ```{r}
 library(tidyverse)
-library(glmnet)
 library(caret)
-library(corrplot)
-library(plotmo)
-library(pls)
 ```
 
 # Data 
@@ -55,6 +51,7 @@ y.train = train$Solubility
 X.test = model.matrix(Solubility ~ ., test)[,-1]
 y.test = test$Solubility
 
+# Validation control
 ctrl1 <- trainControl(method = "repeatedcv", number = 10, repeats = 5)
 ```
 
@@ -112,7 +109,7 @@ lasso.fit <- train(X.train, y.train,
                      trControl = ctrl1)
 
 plot(lasso.fit)
-plot(lasso.fit, xTrans = function(x) log(x)) # here were are plotting log lambda so it looks like the previous plots
+plot(lasso.fit, xTrans = function(x) log(x)) 
 
 ```
 
@@ -172,4 +169,4 @@ summary(resamp)
 bwplot(resamp, metric = "RMSE")
 ```
 
-RMSE is minimum for the lasso compared to Rigde, PCR and linear method. This means the the coefficient for some of the predictors are truly zero. For this particular dataset, the Lasso provides best fit. 
+RMSE is minimum for the lasso compared to Rigde, PCR and linear method. This means the the coefficient for some of the predictors are truly zero. For this particular dataset, the Lasso provides best fit. Ridge regression is the next best model and the linear model is the worst. This means the shrinking coefficient is helpful. PCR with 149 components results in a model comparable to the linear model. 
