@@ -29,10 +29,10 @@ The data has been divided into training and testing. The testing data has 951 ob
 ```{r}
 # Checking for missing values
 missing_train <- sapply(train, function(x) sum(is.na(x)))
-missing_train[missing_train > 0]
+print(missing_train[missing_train > 0])
 
 missing_test <- sapply(test, function(x) sum(is.na(x)))
-missing_test[missing_test > 0]
+print(missing_test[missing_test > 0])
 ```
 
 No missing data 
@@ -65,9 +65,10 @@ lm.fit <- train(X.train, y.train,
 
 pred.lm <- predict(lm.fit$finalModel, newdata = data.frame(X.test))
 
-mean((pred.lm - y.test)^2)
+print(mean((pred.lm - y.test)^2))
 ```
 
+The test MSE is 0.5558898
 
 ## Question 2 -- Ridge Regression
 
@@ -93,7 +94,7 @@ bestlam.ridge
 
 ```{r}
 ridge.pred = predict(ridge.fit$finalModel, s = bestlam.ridge, newx = X.test)
-mean((ridge.pred - y.test)^2)
+print(mean((ridge.pred - y.test)^2))
 ```
 
 The mean test error is 0.51346
@@ -120,10 +121,10 @@ bestlam.lasso
 
 ```{r}
 lasso.pred = predict(lasso.fit$finalModel, s = bestlam.lasso, newx = X.test)
-mean((lasso.pred - y.test)^2)
+print(mean((lasso.pred - y.test)^2))
 ```
 
-The mean error is 0.4987. 
+The mean error is 0.496. 
 
 ```{r}
 lasso.coef = predict(lasso.fit$finalModel, type = "coefficients", s = bestlam.lasso)[1:ncol(train),]
@@ -164,7 +165,7 @@ resamp <- resamples(list(lasso = lasso.fit,
                          ridge = ridge.fit, 
                          pcr = pcr.fit,
                          lm = lm.fit))
-summary(resamp)
+print(summary(resamp))
 
 bwplot(resamp, metric = "RMSE")
 ```
