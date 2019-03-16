@@ -1,8 +1,8 @@
 ---
-title: "Untitled"
+title: "HW2"
 author: "Amin Yakubu"
 date: "3/16/2019"
-output: html_document
+output: github_document
 ---
 
 ```{r setup, include=FALSE}
@@ -12,6 +12,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r}
 library(caret)
 library(tidyverse)
+library(gam)
 ```
 
 Let's read in the data 
@@ -52,8 +53,26 @@ anova(fit1, fit2, fit3, fit4)
 ```
 
 
+Question 2
+
+```{r}
+fit.ss.cv <- smooth.spline(concrete_df$Water, concrete_df$CompressiveStrength, cv = TRUE)
+fit.ss.cv$df
+
+fit.ss <- smooth.spline(concrete_df$Water, concrete_df$CompressiveStrength)
+fit.ss$df
+```
+
+```{r}
+water_lims <- range(concrete_df$Water)
+water.grid <- seq(from = water_lims[1], to = water_lims[2])
+```
 
 
+```{r}
+gam.m1 <- gam(CompressiveStrength ~ . + s(Water), data = concrete_df)
+plot(gam.m1)
+```
 
 
 

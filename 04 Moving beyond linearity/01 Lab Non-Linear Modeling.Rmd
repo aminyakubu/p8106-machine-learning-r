@@ -2,7 +2,7 @@
 title: "Non-Linear Modeling"
 author: "Amin Yakubu"
 date: "3/13/2019"
-output: html_document
+output: github_document
 ---
 
 ```{r setup, include=FALSE}
