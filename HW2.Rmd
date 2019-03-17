@@ -13,6 +13,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library(caret)
 library(tidyverse)
 library(gam)
+library(boot)
 ```
 
 Let's read in the data 
@@ -41,22 +42,67 @@ featurePlot(X, y, plot = "scatter", labels = c("","Y"),
             type = c("p"), layout = c(4, 2))
 ```
 
+Here I am using cross-validation  to  select  the  optimal  degreedforthe polynomial.
+
+```{r}
+set.seed(1)
+deltas <- rep(NA, 5)
+for (i in 1:5) {
+    fit <- glm(CompressiveStrength ~ poly(Water, i), data = concrete_df)
+    deltas[i] <- cv.glm(concrete_df, fit, K = 10)$delta[1]
+}
+
+plot(1:5, deltas, xlab = "Degree", ylab = "Test MSE", type = "l")
+d.min <- which.min(deltas)
+points(which.min(deltas), deltas[which.min(deltas)], col = "red", cex = 2, pch = 20)
+```
+
+We see that the optimal d chosen is 4. 
+
+Now let's use ANOVA to test the subsets. 
+
 ```{r}
 fit1 = lm(CompressiveStrength ~ Water, data = concrete_df)
 fit2 = lm(CompressiveStrength ~ poly(Water, 2), data = concrete_df)
 fit3 = lm(CompressiveStrength ~ poly(Water, 3), data = concrete_df)
 fit4 = lm(CompressiveStrength ~ poly(Water, 4), data = concrete_df)
+fit5 = lm(CompressiveStrength ~ poly(Water, 5), data = concrete_df)
 ```
 
 ```{r}
-anova(fit1, fit2, fit3, fit4)
+anova(fit1, fit2, fit3, fit4, fit5)
 ```
 
-
-Question 2
+Using ANOVA and by examining the p-values we see that degree 4 or 5 polynomial appear to provide a reasonable fit to the data. I will choose the 4 polynomial since we want a parsimonious model.
 
 ```{r}
-fit.ss.cv <- smooth.spline(concrete_df$Water, concrete_df$CompressiveStrength, cv = TRUE)
+plot(CompressiveStrength ~ Water, data = concrete_df, col = "red")
+waterlims <- range(concrete_df$Water)
+
+water.grid <- seq(from = waterlims[1], to = waterlims[2], by = 1)
+
+fit <- lm(CompressiveStrength ~ poly(Water, 4), data = concrete_df)
+
+preds <- predict(fit, newdata = data.frame(Water = water.grid))
+
+lines(water.grid, preds, col = "blue", lwd = 2)
+```
+
+# Question 2
+
+```{r}
+all.cvs = rep(NA, 10)
+
+for (i in 2:10) {
+  fit.ss = smooth.spline(concrete_df$Water, concrete_df$CompressiveStrength, df = i)
+  all.cvs[i] = cv.glm(concrete_df, fit.ss, K = 10)$delta[2]
+}
+
+plot(2:10, all.cvs[-1], xlab = "Number of df", ylab = "CV error", type = "l", pch = 20, lwd=2)
+```
+
+```{r}
+fit.ss.cv <- smooth.spline(concrete_df$Water, concrete_df$CompressiveStrength, df = 2)
 fit.ss.cv$df
 
 fit.ss <- smooth.spline(concrete_df$Water, concrete_df$CompressiveStrength)
