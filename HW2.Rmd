@@ -7,7 +7,8 @@ output: github_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-knitr::opts_chunk$set(warning = TRUE)
+knitr::opts_chunk$set(warning = F)
+knitr::opts_chunk$set(message = F)
 ```
 
 ```{r}
@@ -15,6 +16,7 @@ library(caret)
 library(tidyverse)
 library(gam)
 library(boot)
+library(mgcv)
 ```
 
 Let's read in the data 
@@ -115,17 +117,15 @@ p + geom_line(aes(x = water, y = pred), data = pred.ss.df,
   theme(plot.title = element_text(hjust = 0.5))
 ```
 
-Here we will fit for different degrees of freedom for 2 to 8. 
+Here we will fit for different degrees of freedom for 2 to 10. 
 
 ```{r}
-par(mfrow = c(3,3)) # 5 x 5 grid
+par(mfrow = c(3,3)) # 3 x 3 grid
 all.dfs = rep(NA, 9)
 for (i in 2:10) {
   fit.ss = smooth.spline(concrete_df$Water, concrete_df$CompressiveStrength, df = i)
   
   pred.ss <- predict(fit.ss, x = water.grid)
-  pred.ss.df <- data.frame(pred = pred.ss$y,
-                         water = water.grid)
   
   plot(concrete_df$Water, concrete_df$CompressiveStrength, cex = .5, col = "darkgrey")
   title(paste("Degrees of freedom = ", round(fit.ss$df)),  outer = F)
@@ -134,21 +134,24 @@ for (i in 2:10) {
 
 ```
 
-
 ## Question D
 
 Here I will find a GAM using all the predictors
 
 ```{r}
-gam.m1 <- gam(CompressiveStrength ~ Cement + BlastFurnaceSlag + FlyAsh + s(Water) + Superplasticizer + CoarseAggregate + FineAggregate + s(Age), data = concrete_df)
-
-gam.m2 <- gam(CompressiveStrength ~ Cement + BlastFurnaceSlag + FlyAsh + Water + Superplasticizer + CoarseAggregate + FineAggregate + Age, data = concrete_df)
-
-anova(gam.m1, gam.m2, test = 'F')
+gam.m1 = mgcv::gam(CompressiveStrength ~ Cement + BlastFurnaceSlag + FlyAsh + s(Water) + Superplasticizer + CoarseAggregate + FineAggregate + s(Age), data = concrete_df)
 
 par(mfrow = c(1,2))
 plot(gam.m1)
 ```
+
+```{r}
+gam.m2 = mgcv::gam(CompressiveStrength ~ Cement + BlastFurnaceSlag + FlyAsh + Water + Superplasticizer + CoarseAggregate + FineAggregate + Age, data = concrete_df)
+
+anova(gam.m1, gam.m2, test = 'F')
+```
+
+
 
 
 

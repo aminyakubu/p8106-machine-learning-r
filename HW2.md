@@ -5,76 +5,16 @@ Amin Yakubu
 
 ``` r
 library(caret)
-```
-
-    ## Loading required package: lattice
-
-    ## Loading required package: ggplot2
-
-``` r
 library(tidyverse)
-```
-
-    ## ── Attaching packages ────────────────────────────────────────────────────────────────────────────────────── tidyverse 1.2.1 ──
-
-    ## ✔ tibble  2.0.1       ✔ purrr   0.2.5  
-    ## ✔ tidyr   0.8.1       ✔ dplyr   0.8.0.1
-    ## ✔ readr   1.1.1       ✔ stringr 1.4.0  
-    ## ✔ tibble  2.0.1       ✔ forcats 0.3.0
-
-    ## ── Conflicts ───────────────────────────────────────────────────────────────────────────────────────── tidyverse_conflicts() ──
-    ## ✖ dplyr::filter() masks stats::filter()
-    ## ✖ dplyr::lag()    masks stats::lag()
-    ## ✖ purrr::lift()   masks caret::lift()
-
-``` r
 library(gam)
-```
-
-    ## Loading required package: splines
-
-    ## Loading required package: foreach
-
-    ## 
-    ## Attaching package: 'foreach'
-
-    ## The following objects are masked from 'package:purrr':
-    ## 
-    ##     accumulate, when
-
-    ## Loaded gam 1.16
-
-``` r
 library(boot)
+library(mgcv)
 ```
-
-    ## 
-    ## Attaching package: 'boot'
-
-    ## The following object is masked from 'package:lattice':
-    ## 
-    ##     melanoma
 
 Let's read in the data
 
 ``` r
 concrete_df = read_csv('data/concrete.csv')
-```
-
-    ## Parsed with column specification:
-    ## cols(
-    ##   Cement = col_double(),
-    ##   BlastFurnaceSlag = col_double(),
-    ##   FlyAsh = col_double(),
-    ##   Water = col_double(),
-    ##   Superplasticizer = col_double(),
-    ##   CoarseAggregate = col_double(),
-    ##   FineAggregate = col_double(),
-    ##   Age = col_integer(),
-    ##   CompressiveStrength = col_double()
-    ## )
-
-``` r
 attach(concrete_df)
 ```
 
@@ -200,17 +140,15 @@ p + geom_line(aes(x = water, y = pred), data = pred.ss.df,
 
 ![](HW2_files/figure-markdown_github/unnamed-chunk-9-1.png)
 
-Here we will fit for different degrees of freedom for 2 to 8.
+Here we will fit for different degrees of freedom for 2 to 10.
 
 ``` r
-par(mfrow = c(3,3)) # 5 x 5 grid
+par(mfrow = c(3,3)) # 3 x 3 grid
 all.dfs = rep(NA, 9)
 for (i in 2:10) {
   fit.ss = smooth.spline(concrete_df$Water, concrete_df$CompressiveStrength, df = i)
   
   pred.ss <- predict(fit.ss, x = water.grid)
-  pred.ss.df <- data.frame(pred = pred.ss$y,
-                         water = water.grid)
   
   plot(concrete_df$Water, concrete_df$CompressiveStrength, cex = .5, col = "darkgrey")
   title(paste("Degrees of freedom = ", round(fit.ss$df)),  outer = F)
@@ -223,14 +161,31 @@ for (i in 2:10) {
 Question D
 ----------
 
-``` r
-water_lims <- range(concrete_df$Water)
-water.grid <- seq(from = water_lims[1], to = water_lims[2])
-```
+Here I will find a GAM using all the predictors
 
 ``` r
-gam.m1 <- gam(CompressiveStrength ~ . + s(Water), data = concrete_df)
+gam.m1 <- mgcv::gam(CompressiveStrength ~ Cement + BlastFurnaceSlag + FlyAsh + s(Water) + Superplasticizer + CoarseAggregate + FineAggregate + s(Age), data = concrete_df)
+
+par(mfrow = c(1,2))
 plot(gam.m1)
 ```
 
-![](HW2_files/figure-markdown_github/unnamed-chunk-12-1.png)![](HW2_files/figure-markdown_github/unnamed-chunk-12-2.png)![](HW2_files/figure-markdown_github/unnamed-chunk-12-3.png)![](HW2_files/figure-markdown_github/unnamed-chunk-12-4.png)![](HW2_files/figure-markdown_github/unnamed-chunk-12-5.png)![](HW2_files/figure-markdown_github/unnamed-chunk-12-6.png)![](HW2_files/figure-markdown_github/unnamed-chunk-12-7.png)![](HW2_files/figure-markdown_github/unnamed-chunk-12-8.png)![](HW2_files/figure-markdown_github/unnamed-chunk-12-9.png)
+![](HW2_files/figure-markdown_github/unnamed-chunk-11-1.png)
+
+``` r
+gam.m2 <- mgcv::gam(CompressiveStrength ~ Cement + BlastFurnaceSlag + FlyAsh + Water + Superplasticizer + CoarseAggregate + FineAggregate + Age, data = concrete_df)
+
+anova(gam.m1, gam.m2, test = 'F')
+```
+
+    ## Analysis of Deviance Table
+    ## 
+    ## Model 1: CompressiveStrength ~ Cement + BlastFurnaceSlag + FlyAsh + s(Water) + 
+    ##     Superplasticizer + CoarseAggregate + FineAggregate + s(Age)
+    ## Model 2: CompressiveStrength ~ Cement + BlastFurnaceSlag + FlyAsh + Water + 
+    ##     Superplasticizer + CoarseAggregate + FineAggregate + Age
+    ##   Resid. Df Resid. Dev      Df Deviance      F    Pr(>F)    
+    ## 1    1005.2      43122                                      
+    ## 2    1021.0     110413 -15.757   -67291 99.632 < 2.2e-16 ***
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
