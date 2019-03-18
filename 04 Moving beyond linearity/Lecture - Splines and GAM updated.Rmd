@@ -64,7 +64,7 @@ fit.sf <- lm(lpsa~cut(pgg45, 4), data = Prostate)
 ```
 
 ## Splines
-We first look at the shape of cubic spline basis using B-spline representation. Note that the fitted line will be linear combination of these bases. They provides an equivalent fit but are not the same as the expression of cubic spline bases in the slides. 
+We first look at the shape of cubic spline basis using B-spline representation. Note that the fitted line will be linear combination of these bases. They provide an equivalent fit but are not the same as the expression of cubic spline bases in the slides. 
 
 ### B-spline basis for cubic splines
 The function `bs()` can be used to generate the spline basis matrix. You can specify the degree of freedom via `df`; you may also use the `knots` and `degree` arguments.

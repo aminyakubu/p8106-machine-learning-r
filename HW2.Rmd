@@ -137,13 +137,16 @@ for (i in 2:10) {
 
 ## Question D
 
-```{r}
-water_lims <- range(concrete_df$Water)
-water.grid <- seq(from = water_lims[1], to = water_lims[2])
-```
+Here I will find a GAM using all the predictors
 
 ```{r}
-gam.m1 <- gam(CompressiveStrength ~ . + s(Water), data = concrete_df)
+gam.m1 <- gam(CompressiveStrength ~ Cement + BlastFurnaceSlag + FlyAsh + s(Water) + Superplasticizer + CoarseAggregate + FineAggregate + s(Age), data = concrete_df)
+
+gam.m2 <- gam(CompressiveStrength ~ Cement + BlastFurnaceSlag + FlyAsh + Water + Superplasticizer + CoarseAggregate + FineAggregate + Age, data = concrete_df)
+
+anova(gam.m1, gam.m2, test = 'F')
+
+par(mfrow = c(1,2))
 plot(gam.m1)
 ```
 
