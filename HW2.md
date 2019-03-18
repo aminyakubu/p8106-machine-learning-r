@@ -15,14 +15,14 @@ library(caret)
 library(tidyverse)
 ```
 
-    ## ── Attaching packages ──────────────────────────────────────────────────────────────────────────────────────── tidyverse 1.2.1 ──
+    ## ── Attaching packages ────────────────────────────────────────────────────────────────────────────────────── tidyverse 1.2.1 ──
 
     ## ✔ tibble  2.0.1       ✔ purrr   0.2.5  
     ## ✔ tidyr   0.8.1       ✔ dplyr   0.8.0.1
     ## ✔ readr   1.1.1       ✔ stringr 1.4.0  
     ## ✔ tibble  2.0.1       ✔ forcats 0.3.0
 
-    ## ── Conflicts ─────────────────────────────────────────────────────────────────────────────────────────── tidyverse_conflicts() ──
+    ## ── Conflicts ───────────────────────────────────────────────────────────────────────────────────────── tidyverse_conflicts() ──
     ## ✖ dplyr::filter() masks stats::filter()
     ## ✖ dplyr::lag()    masks stats::lag()
     ## ✖ purrr::lift()   masks caret::lift()
@@ -43,6 +43,17 @@ library(gam)
     ##     accumulate, when
 
     ## Loaded gam 1.16
+
+``` r
+library(boot)
+```
+
+    ## 
+    ## Attaching package: 'boot'
+
+    ## The following object is masked from 'package:lattice':
+    ## 
+    ##     melanoma
 
 Let's read in the data
 
@@ -72,8 +83,10 @@ X = model.matrix(CompressiveStrength ~ ., concrete_df)[,-1]
 y = concrete_df$CompressiveStrength
 ```
 
-Scatter plots
--------------
+Question A
+----------
+
+Scatter plots to visualize the distribution of the variables
 
 ``` r
 theme1 <- trellis.par.get()
@@ -89,15 +102,40 @@ featurePlot(X, y, plot = "scatter", labels = c("","Y"),
 
 ![](HW2_files/figure-markdown_github/unnamed-chunk-4-1.png)
 
+Question B
+----------
+
+Here I am using cross-validation to select the optimal degreedforthe polynomial.
+
+``` r
+set.seed(1)
+deltas <- rep(NA, 5)
+for (i in 1:5) {
+    fit <- glm(CompressiveStrength ~ poly(Water, i), data = concrete_df)
+    deltas[i] <- cv.glm(concrete_df, fit, K = 10)$delta[1]
+}
+
+plot(1:5, deltas, xlab = "Degree", ylab = "Test MSE", type = "l")
+d.min <- which.min(deltas)
+points(which.min(deltas), deltas[which.min(deltas)], col = "red", cex = 2, pch = 20)
+```
+
+![](HW2_files/figure-markdown_github/unnamed-chunk-5-1.png)
+
+We see that the optimal d chosen is 4.
+
+Now let's use ANOVA to test the subsets.
+
 ``` r
 fit1 = lm(CompressiveStrength ~ Water, data = concrete_df)
 fit2 = lm(CompressiveStrength ~ poly(Water, 2), data = concrete_df)
 fit3 = lm(CompressiveStrength ~ poly(Water, 3), data = concrete_df)
 fit4 = lm(CompressiveStrength ~ poly(Water, 4), data = concrete_df)
+fit5 = lm(CompressiveStrength ~ poly(Water, 5), data = concrete_df)
 ```
 
 ``` r
-anova(fit1, fit2, fit3, fit4)
+anova(fit1, fit2, fit3, fit4, fit5)
 ```
 
     ## Analysis of Variance Table
@@ -106,29 +144,37 @@ anova(fit1, fit2, fit3, fit4)
     ## Model 2: CompressiveStrength ~ poly(Water, 2)
     ## Model 3: CompressiveStrength ~ poly(Water, 3)
     ## Model 4: CompressiveStrength ~ poly(Water, 4)
+    ## Model 5: CompressiveStrength ~ poly(Water, 5)
     ##   Res.Df    RSS Df Sum of Sq      F    Pr(>F)    
     ## 1   1028 263085                                  
-    ## 2   1027 247712  1   15372.8 68.140 4.652e-16 ***
-    ## 3   1026 235538  1   12174.0 53.962 4.166e-13 ***
-    ## 4   1025 231246  1    4291.5 19.022 1.423e-05 ***
+    ## 2   1027 247712  1   15372.8 68.122 4.696e-16 ***
+    ## 3   1026 235538  1   12174.0 53.947 4.197e-13 ***
+    ## 4   1025 231246  1    4291.5 19.017 1.426e-05 ***
+    ## 5   1024 231081  1     165.9  0.735    0.3915    
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
-Question 2
+Using ANOVA and by examining the p-values we see that degree 4 or 5 polynomial appear to provide a reasonable fit to the data. I will choose the 4 polynomial since we want a parsimonious model.
 
 ``` r
-fit.ss.cv <- smooth.spline(concrete_df$Water, concrete_df$CompressiveStrength, cv = TRUE)
+plot(CompressiveStrength ~ Water, data = concrete_df, col = "red")
+waterlims <- range(concrete_df$Water)
+
+water.grid <- seq(from = waterlims[1], to = waterlims[2], by = 1)
+
+fit <- lm(CompressiveStrength ~ poly(Water, 4), data = concrete_df)
+
+preds <- predict(fit, newdata = data.frame(Water = water.grid))
+
+lines(water.grid, preds, col = "blue", lwd = 2)
 ```
 
-    ## Warning in smooth.spline(concrete_df$Water,
-    ## concrete_df$CompressiveStrength, : cross-validation with non-unique 'x'
-    ## values seems doubtful
+![](HW2_files/figure-markdown_github/unnamed-chunk-8-1.png)
 
-``` r
-fit.ss.cv$df
-```
+Question C
+----------
 
-    ## [1] 8.04468
+Here we are using the generalized cross-validation to choose the degrees of freedom
 
 ``` r
 fit.ss <- smooth.spline(concrete_df$Water, concrete_df$CompressiveStrength)
@@ -136,6 +182,46 @@ fit.ss$df
 ```
 
     ## [1] 68.88205
+
+``` r
+pred.ss <- predict(fit.ss, x = water.grid)
+
+pred.ss.df <- data.frame(pred = pred.ss$y,
+                         water = water.grid)
+
+p <- ggplot(data = concrete_df, aes(x = Water, y = CompressiveStrength)) +
+  geom_point(color = rgb(.2, .4, .2, .5))
+
+p + geom_line(aes(x = water, y = pred), data = pred.ss.df, 
+              color = rgb(.8, .1, .1, 1)) + theme_bw() + 
+  labs(title = 'Select degrees of freedom using GCV') + 
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+![](HW2_files/figure-markdown_github/unnamed-chunk-9-1.png)
+
+Here we will fit for different degrees of freedom for 2 to 8.
+
+``` r
+par(mfrow = c(3,3)) # 5 x 5 grid
+all.dfs = rep(NA, 9)
+for (i in 2:10) {
+  fit.ss = smooth.spline(concrete_df$Water, concrete_df$CompressiveStrength, df = i)
+  
+  pred.ss <- predict(fit.ss, x = water.grid)
+  pred.ss.df <- data.frame(pred = pred.ss$y,
+                         water = water.grid)
+  
+  plot(concrete_df$Water, concrete_df$CompressiveStrength, cex = .5, col = "darkgrey")
+  title(paste("Degrees of freedom = ", round(fit.ss$df)),  outer = F)
+  lines(water.grid, pred.ss$y, lwd = 2, col = "blue")
+}
+```
+
+![](HW2_files/figure-markdown_github/unnamed-chunk-10-1.png)
+
+Question D
+----------
 
 ``` r
 water_lims <- range(concrete_df$Water)
@@ -147,4 +233,4 @@ gam.m1 <- gam(CompressiveStrength ~ . + s(Water), data = concrete_df)
 plot(gam.m1)
 ```
 
-![](HW2_files/figure-markdown_github/unnamed-chunk-9-1.png)![](HW2_files/figure-markdown_github/unnamed-chunk-9-2.png)![](HW2_files/figure-markdown_github/unnamed-chunk-9-3.png)![](HW2_files/figure-markdown_github/unnamed-chunk-9-4.png)![](HW2_files/figure-markdown_github/unnamed-chunk-9-5.png)![](HW2_files/figure-markdown_github/unnamed-chunk-9-6.png)![](HW2_files/figure-markdown_github/unnamed-chunk-9-7.png)![](HW2_files/figure-markdown_github/unnamed-chunk-9-8.png)![](HW2_files/figure-markdown_github/unnamed-chunk-9-9.png)
+![](HW2_files/figure-markdown_github/unnamed-chunk-12-1.png)![](HW2_files/figure-markdown_github/unnamed-chunk-12-2.png)![](HW2_files/figure-markdown_github/unnamed-chunk-12-3.png)![](HW2_files/figure-markdown_github/unnamed-chunk-12-4.png)![](HW2_files/figure-markdown_github/unnamed-chunk-12-5.png)![](HW2_files/figure-markdown_github/unnamed-chunk-12-6.png)![](HW2_files/figure-markdown_github/unnamed-chunk-12-7.png)![](HW2_files/figure-markdown_github/unnamed-chunk-12-8.png)![](HW2_files/figure-markdown_github/unnamed-chunk-12-9.png)

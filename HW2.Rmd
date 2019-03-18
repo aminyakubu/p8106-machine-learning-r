@@ -7,6 +7,7 @@ output: github_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(warning = TRUE)
 ```
 
 ```{r}
@@ -28,7 +29,9 @@ X = model.matrix(CompressiveStrength ~ ., concrete_df)[,-1]
 y = concrete_df$CompressiveStrength
 ```
 
-## Scatter plots
+## Question A 
+
+Scatter plots to visualize the distribution of the variables
 
 ```{r}
 theme1 <- trellis.par.get()
@@ -41,6 +44,8 @@ trellis.par.set(theme1)
 featurePlot(X, y, plot = "scatter", labels = c("","Y"),
             type = c("p"), layout = c(4, 2))
 ```
+
+## Question B
 
 Here I am using cross-validation  to  select  the  optimal  degreedforthe polynomial.
 
@@ -88,32 +93,54 @@ preds <- predict(fit, newdata = data.frame(Water = water.grid))
 lines(water.grid, preds, col = "blue", lwd = 2)
 ```
 
-# Question 2
+## Question C
+
+Here we are using the generalized cross-validation to choose the degrees of freedom
 
 ```{r}
-all.cvs = rep(NA, 10)
-
-for (i in 2:10) {
-  fit.ss = smooth.spline(concrete_df$Water, concrete_df$CompressiveStrength, df = i)
-  all.cvs[i] = cv.glm(concrete_df, fit.ss, K = 10)$delta[2]
-}
-
-plot(2:10, all.cvs[-1], xlab = "Number of df", ylab = "CV error", type = "l", pch = 20, lwd=2)
-```
-
-```{r}
-fit.ss.cv <- smooth.spline(concrete_df$Water, concrete_df$CompressiveStrength, df = 2)
-fit.ss.cv$df
-
 fit.ss <- smooth.spline(concrete_df$Water, concrete_df$CompressiveStrength)
 fit.ss$df
+
+pred.ss <- predict(fit.ss, x = water.grid)
+
+pred.ss.df <- data.frame(pred = pred.ss$y,
+                         water = water.grid)
+
+p <- ggplot(data = concrete_df, aes(x = Water, y = CompressiveStrength)) +
+  geom_point(color = rgb(.2, .4, .2, .5))
+
+p + geom_line(aes(x = water, y = pred), data = pred.ss.df, 
+              color = rgb(.8, .1, .1, 1)) + theme_bw() + 
+  labs(title = 'Select degrees of freedom using GCV') + 
+  theme(plot.title = element_text(hjust = 0.5))
 ```
+
+Here we will fit for different degrees of freedom for 2 to 8. 
+
+```{r}
+par(mfrow = c(3,3)) # 5 x 5 grid
+all.dfs = rep(NA, 9)
+for (i in 2:10) {
+  fit.ss = smooth.spline(concrete_df$Water, concrete_df$CompressiveStrength, df = i)
+  
+  pred.ss <- predict(fit.ss, x = water.grid)
+  pred.ss.df <- data.frame(pred = pred.ss$y,
+                         water = water.grid)
+  
+  plot(concrete_df$Water, concrete_df$CompressiveStrength, cex = .5, col = "darkgrey")
+  title(paste("Degrees of freedom = ", round(fit.ss$df)),  outer = F)
+  lines(water.grid, pred.ss$y, lwd = 2, col = "blue")
+}
+
+```
+
+
+## Question D
 
 ```{r}
 water_lims <- range(concrete_df$Water)
 water.grid <- seq(from = water_lims[1], to = water_lims[2])
 ```
-
 
 ```{r}
 gam.m1 <- gam(CompressiveStrength ~ . + s(Water), data = concrete_df)
