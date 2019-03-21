@@ -98,8 +98,8 @@ Using ANOVA and by examining the p-values we see that degree 4 or 5 polynomial a
 
 ``` r
 plot(CompressiveStrength ~ Water, data = concrete_df, col = "red")
-waterlims <- range(concrete_df$Water)
 
+waterlims <- range(concrete_df$Water)
 water.grid <- seq(from = waterlims[1], to = waterlims[2], by = 1)
 
 fit <- lm(CompressiveStrength ~ poly(Water, 4), data = concrete_df)
@@ -134,11 +134,13 @@ p <- ggplot(data = concrete_df, aes(x = Water, y = CompressiveStrength)) +
 
 p + geom_line(aes(x = water, y = pred), data = pred.ss.df, 
               color = rgb(.8, .1, .1, 1)) + theme_bw() + 
-  labs(title = 'Select degrees of freedom using GCV') + 
+  labs(title = paste(round(fit.ss$df), 'degrees of freedom from GCV')) + 
   theme(plot.title = element_text(hjust = 0.5))
 ```
 
 ![](HW2_files/figure-markdown_github/unnamed-chunk-9-1.png)
+
+The chosen degrees of freedom 68.88. This is high and makes the model more wiggly.
 
 Here we will fit for different degrees of freedom for 2 to 10.
 
@@ -164,7 +166,7 @@ Question D
 Here I will find a GAM using all the predictors
 
 ``` r
-gam.m1 <- mgcv::gam(CompressiveStrength ~ Cement + BlastFurnaceSlag + FlyAsh + s(Water) + Superplasticizer + CoarseAggregate + FineAggregate + s(Age), data = concrete_df)
+gam.m1 = mgcv::gam(CompressiveStrength ~ Cement + BlastFurnaceSlag + FlyAsh + s(Water) + Superplasticizer + CoarseAggregate + FineAggregate + s(Age), data = concrete_df)
 
 par(mfrow = c(1,2))
 plot(gam.m1)
@@ -173,7 +175,7 @@ plot(gam.m1)
 ![](HW2_files/figure-markdown_github/unnamed-chunk-11-1.png)
 
 ``` r
-gam.m2 <- mgcv::gam(CompressiveStrength ~ Cement + BlastFurnaceSlag + FlyAsh + Water + Superplasticizer + CoarseAggregate + FineAggregate + Age, data = concrete_df)
+gam.m2 = mgcv::gam(CompressiveStrength ~ Cement + BlastFurnaceSlag + FlyAsh + Water + Superplasticizer + CoarseAggregate + FineAggregate + Age, data = concrete_df)
 
 anova(gam.m1, gam.m2, test = 'F')
 ```
@@ -189,3 +191,5 @@ anova(gam.m1, gam.m2, test = 'F')
     ## 2    1021.0     110413 -15.757   -67291 99.632 < 2.2e-16 ***
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+According the p-value the anova, non linear model is better.

@@ -2,7 +2,7 @@
 title: "HW2"
 author: "Amin Yakubu"
 date: "3/16/2019"
-output: github_document
+output: pdf_document
 ---
 
 ```{r setup, include=FALSE}
@@ -49,7 +49,7 @@ featurePlot(X, y, plot = "scatter", labels = c("","Y"),
 
 ## Question B
 
-Here I am using cross-validation  to  select  the  optimal  degreedforthe polynomial.
+Here I am using cross-validation  to  select  the  optimal  degreedforthe polynomial. I'm doing to 5 so as to see if the test error will decrease or increase at 5. 
 
 ```{r}
 set.seed(1)
@@ -84,8 +84,8 @@ Using ANOVA and by examining the p-values we see that degree 4 or 5 polynomial a
 
 ```{r}
 plot(CompressiveStrength ~ Water, data = concrete_df, col = "red")
-waterlims <- range(concrete_df$Water)
 
+waterlims <- range(concrete_df$Water)
 water.grid <- seq(from = waterlims[1], to = waterlims[2], by = 1)
 
 fit <- lm(CompressiveStrength ~ poly(Water, 4), data = concrete_df)
@@ -95,12 +95,31 @@ preds <- predict(fit, newdata = data.frame(Water = water.grid))
 lines(water.grid, preds, col = "blue", lwd = 2)
 ```
 
+Plots of the fits 
+```{r}
+plot(CompressiveStrength ~ Water, data = concrete_df, col = "blue")
+
+preds1 <- predict(fit1, newdata = data.frame(Water = water.grid))
+preds2 <- predict(fit2, newdata = data.frame(Water = water.grid))
+preds3 <- predict(fit3, newdata = data.frame(Water = water.grid))
+preds4 <- predict(fit4, newdata = data.frame(Water = water.grid))
+
+lines(water.grid, preds1, col = "red", lwd = 2)
+lines(water.grid, preds2, col = "blue", lwd = 2)
+lines(water.grid, preds3, col = "green", lwd = 2)
+lines(water.grid, preds4, col = "brown", lwd = 2)
+
+# Add a legend
+legend(200, 80, legend = c("degree 1", "degree 2", "degree 3", "degree 4"),
+       col = c("red", "blue", "green", "brown"), lty = 1:1, cex = 0.8)
+```
+
 ## Question C
 
 Here we are using the generalized cross-validation to choose the degrees of freedom
 
 ```{r}
-fit.ss <- smooth.spline(concrete_df$Water, concrete_df$CompressiveStrength)
+fit.ss <- smooth.spline(concrete_df$Water, concrete_df$CompressiveStrength, keep.data = T)
 fit.ss$df
 
 pred.ss <- predict(fit.ss, x = water.grid)
@@ -113,9 +132,11 @@ p <- ggplot(data = concrete_df, aes(x = Water, y = CompressiveStrength)) +
 
 p + geom_line(aes(x = water, y = pred), data = pred.ss.df, 
               color = rgb(.8, .1, .1, 1)) + theme_bw() + 
-  labs(title = 'Select degrees of freedom using GCV') + 
+  labs(title = paste(round(fit.ss$df), 'degrees of freedom from GCV')) + 
   theme(plot.title = element_text(hjust = 0.5))
 ```
+
+The chosen degrees of freedom 68.88. This is high and makes the model more wiggly. 
 
 Here we will fit for different degrees of freedom for 2 to 10. 
 
@@ -131,12 +152,11 @@ for (i in 2:10) {
   title(paste("Degrees of freedom = ", round(fit.ss$df)),  outer = F)
   lines(water.grid, pred.ss$y, lwd = 2, col = "blue")
 }
-
 ```
 
 ## Question D
 
-Here I will find a GAM using all the predictors
+Here I will find a GAM using all the predictors. From the feature plot, Water and Age doesn't look line so I'll fit a smooth spline on those variables. 
 
 ```{r}
 gam.m1 = mgcv::gam(CompressiveStrength ~ Cement + BlastFurnaceSlag + FlyAsh + s(Water) + Superplasticizer + CoarseAggregate + FineAggregate + s(Age), data = concrete_df)
@@ -150,6 +170,9 @@ gam.m2 = mgcv::gam(CompressiveStrength ~ Cement + BlastFurnaceSlag + FlyAsh + Wa
 
 anova(gam.m1, gam.m2, test = 'F')
 ```
+
+According the p-value the anova, non linear model with splines on Age and Water is better. 
+
 
 
 

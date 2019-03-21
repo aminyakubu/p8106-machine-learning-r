@@ -16,7 +16,8 @@ library(ISLR)
 library(car)
 ```
 
-To demostrate the concepts of linear regression, I will use the advertising data which has `r nrow(advertising)` and `r ncol(advertising)`. The variables include advertising budget in thousands of dollars for `TV`, `radio` and `newspaper`. The `sales` has (in thousands) the number of unit of a product sold. 
+To demostrate the concepts of linear regression, I will use the advertising data which has `r nrow(advertising)` and 
+`r ncol(advertising)`. The variables include advertising budget in thousands of dollars for `TV`, `radio` and `newspaper`. The `sales` has (in thousands) the number of unit of a product sold. 
 
 Some questions of interest include
 
@@ -32,7 +33,7 @@ Is there synergy among the advertising media?
 ```{r}
 advertising = read_csv("./data/advertising.csv") 
   
-advertising = advertising %>% select(TV)
+#advertising = advertising %>% select(TV)
 ```
 
 ```{r}
@@ -57,7 +58,7 @@ summary(lm(dat$sales ~ X))
 center the predictors
 ```{r}
 advertising2 = advertising[,-1]
-advertising2 = data.frame(scale(advertising2, scale = FALSE)) %>% View
+advertising2 = data.frame(scale(advertising2, scale = FALSE))
 lm(sales ~ -1 + TV + radio + newspaper, data = advertising2)
 ```
 
