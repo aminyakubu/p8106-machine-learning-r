@@ -4,6 +4,11 @@ output:
   pdf_document: default
   html_document: default
 ---
+
+---
+title: "Nonlinear Methods: Splines and GAM"
+output: pdf_document
+---
   
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -13,7 +18,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library(caret)
 library(glmnet)
 library(MASS)
-library(e1071) # For naive bayes
+library(e1071)
 library(mlbench)
 library(pROC)
 library(AppliedPredictiveModeling)
@@ -28,9 +33,9 @@ dat <- PimaIndiansDiabetes
 transparentTheme(trans = .4)
 featurePlot(x = dat[, 1:8], 
             y = dat$diabetes,
-            scales = list(x=list(relation="free"), # important especially if variables are on different scales
+            scales = list(x=list(relation="free"), 
                         y=list(relation="free")),
-            plot = "density", pch = "|", #pch so that we see pos and neg clearly
+            plot = "density", pch = "|", 
             auto.key = list(columns = 2))
 ```
 
@@ -50,7 +55,7 @@ glm.fit <- glm(diabetes~.,
                subset = rowTrain, 
                family = binomial)
 
-contrasts(dat$diabetes) # This is to see which value is classified as what 
+contrasts(dat$diabetes)
 ```
 
 We first consider the Bayes classifier (cutoff 0.5) and evaluate its performance on the test data.
@@ -58,17 +63,16 @@ We first consider the Bayes classifier (cutoff 0.5) and evaluate its performance
 test.pred.prob  <- predict(glm.fit, newdata = dat[-rowTrain,],
                            type = "response")
 test.pred <- rep("neg", length(test.pred.prob))
-test.pred[test.pred.prob > 0.5] <- "pos"
+test.pred[test.pred.prob>0.5] <- "pos"
 
-sensitivity(data = as.factor(test.pred),
-            reference = dat$diabetes[-rowTrain]) # This gives sensitivity which depends on the cut off 
-specificity(data = as.factor(test.pred),
-            reference = dat$diabetes[-rowTrain])
+
+# confusionMatrix(data = as.factor(test.pred),
+#                 reference = dat$diabetes[-rowTrain])
+
 confusionMatrix(data = as.factor(test.pred),
-                reference = dat$diabetes[-rowTrain])
+                reference = dat$diabetes[-rowTrain],
+                positive = "pos")
 ```
-
-Kappa gives the agreement between raters. Lies between -1 and 1. 0 means random agreement (independently giving rates), 1 is perfect agreeement and -1 is completely in disagreement. We want kappa to be large. 
 
 We then plot the test ROC curve. You may (or may not) also consider to add a smoothed ROC curve.
 ```{r}
@@ -167,7 +171,7 @@ head(qda.pred$posterior)
 set.seed(1)
 
 nbGrid <- expand.grid(usekernel = c(FALSE,TRUE),
-                      fL = 1,  # correction for density of 0. You can make it 0:1. You can try different values of fl. 
+                      fL = 1, 
                       adjust = seq(0,5,by = 1))
 
 model.nb <- train(x = dat[rowTrain,1:8],
@@ -180,14 +184,29 @@ model.nb <- train(x = dat[rowTrain,1:8],
 plot(model.nb)
 ```
 
+### KNN
+
+```{r, warning=FALSE}
+set.seed(1)
+
+model.knn <- train(x = dat[rowTrain,1:8],
+                   y = dat$diabetes[rowTrain],
+                   method = "knn",
+                   preProcess = c("center","scale"),
+                   tuneGrid = data.frame(k = seq(1,200,by=5)),
+                   trControl = ctrl)
+
+ggplot(model.knn)
+```
+
+predict.train(model.knn) - this function will automatically do preprocessing. 
 
 GLM, Regularized GLM and LDA have relatively good performance.
 ```{r}
 res <- resamples(list(GLM = model.glm, GLMNET = model.glmn, 
                       LDA = model.lda, QDA = model.qda,
-                      NB = model.nb))
+                      NB = model.nb, KNN = model.knn))
 summary(res)
-bwplot(res, metric = "ROC")
 ```
 
 Now let's look at the test set performance.
@@ -197,23 +216,26 @@ glm.pred <- predict(model.glm, newdata = dat[-rowTrain,], type = "prob")[,2]
 glmn.pred <- predict(model.glmn, newdata = dat[-rowTrain,], type = "prob")[,2]
 nb.pred <- predict(model.nb, newdata = dat[-rowTrain,], type = "prob")[,2]
 qda.pred <- predict(model.qda, newdata = dat[-rowTrain,], type = "prob")[,2]
+knn.pred <- predict(model.knn, newdata = dat[-rowTrain,], type = "prob")[,2]
+
 
 roc.lda <- roc(dat$diabetes[-rowTrain], lda.pred)
 roc.glm <- roc(dat$diabetes[-rowTrain], glm.pred)
 roc.glmn <- roc(dat$diabetes[-rowTrain], glmn.pred)
 roc.nb <- roc(dat$diabetes[-rowTrain], nb.pred)
 roc.qda <- roc(dat$diabetes[-rowTrain], qda.pred)
-
+roc.knn <- roc(dat$diabetes[-rowTrain], knn.pred)
 
 auc <- c(roc.glm$auc[1], roc.glmn$auc[1], roc.lda$auc[1],
-         roc.qda$auc[1], roc.nb$auc[1])
+         roc.qda$auc[1], roc.nb$auc[1], roc.knn$auc[1])
 
 plot(roc.glm, legacy.axes = TRUE)
-plot(roc.glmn, col = 2, add = TRUE) 
+plot(roc.glmn, col = 2, add = TRUE)
 plot(roc.lda, col = 3, add = TRUE)
 plot(roc.qda, col = 4, add = TRUE)
 plot(roc.nb, col = 5, add = TRUE)
-modelNames <- c("glm","glmn","lda","qda","nb")
+plot(roc.knn, col = 6, add = TRUE)
+modelNames <- c("glm","glmn","lda","qda","nb","knn")
 legend("bottomright", legend = paste0(modelNames, ": ", round(auc,3)),
-       col = 1:5, lwd = 2)
+       col = 1:6, lwd = 2)
 ```
