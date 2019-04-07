@@ -9,3 +9,106 @@ output: github_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+```{r}
+library(ISLR)
+```
+
+# Question 10 
+
+```{r}
+data(Weekly)
+attach(Weekly)
+```
+
+A. Produce some numerical and graphical summaries of the Weekly data. Do there appear to be any patterns?
+
+```{r}
+summary(Weekly)
+```
+
+```{r}
+cor(Weekly[, -9])
+```
+
+```{r}
+plot(Volume)
+```
+
+The correlations between the “lag” variables and today’s returns are close to zero. The only substantial correlation is between “Year” and “Volume”. When we plot “Volume”, we see that it is increasing over time
+
+B. Use the full data set to perform a logistic regression with Direction as the response and the five lag variables plus Volume as predictors. Use the summary function to print the results. Do any of the predictors appear to be statistically significant? If so, which ones?
+
+```{r}
+glm.fit = glm(Direction ~ . -Year -Today, family = binomial, data = Weekly)
+summary(glm.fit)
+```
+
+It would seem that “Lag2” is the only predictor statistically significant as its p-value is less than 0.05.
+
+C. Compute the confusion matrix and overall fraction of correct predictions. Explain what the confusion matrix is telling you about the types of mistakes made by logistic regression.
+
+```{r}
+probs <- predict(glm.fit, type = "response")
+glm.pred <- rep("Down", length(probs))
+glm.pred[probs > 0.5] <- "Up"
+table(glm.pred, Direction)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
