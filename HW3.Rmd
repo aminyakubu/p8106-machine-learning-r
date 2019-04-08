@@ -1,0 +1,238 @@
+---
+title: "HW"
+author: "Amin Yakubu"
+date: "4/7/2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(message = FALSE)
+knitr::opts_chunk$set(warning = FALSE)
+```
+
+```{r}
+library(ISLR)
+library(caret)
+library(corrplot)
+library(pROC)
+library(MASS)
+```
+
+# Question a
+
+Produce some graphical summaries of the Weekly data
+
+```{r}
+data(Weekly)
+
+# excluding Today as a predictor
+Weekly = Weekly[,-8]
+```
+
+```{r}
+featurePlot(x = Weekly[, 1:7], 
+            y = Weekly$Direction,
+            scales = list(x = list(relation = "free"), #  because year is on a different scale
+                        y = list(relation = "free")),
+            plot = "density", pch = "|",
+            auto.key = list(columns = 2))
+```
+
+```{r}
+plot(Weekly$Volume)
+```
+
+Here we see that volume is increasing over time. Also, we see that year is highly correlated with volume. From the graphs we can see that lag1-lag5 are approximately normally distributed. Volume is skewed to the right. 
+
+```{r}
+cor(Weekly[,-8])
+```
+
+# Question b  
+
+```{r}
+weekly = Weekly[,-1]
+attach(weekly)
+```
+
+```{r}
+set.seed(1)
+rowTrain <- createDataPartition(y = weekly$Direction,
+                                p = 0.75,
+                                list = FALSE)
+```
+
+```{r}
+glm.fit = glm(Direction ~ ., data = weekly, family = binomial)
+summary(glm.fit)
+```
+
+The smallest p-value here is associated with Lag2. At the 5% level of significance, lag2 is the only predictor that is statistically significant. 
+
+# Question c
+
+```{r}
+test.pred.prob  <- predict(glm.fit, newdata = weekly, type = "response")
+
+test.pred <- rep("Down", length(test.pred.prob))
+
+test.pred[test.pred.prob > 0.5] <- "Up"
+```
+
+```{r}
+confusionMatrix(data = as.factor(test.pred),
+                reference = weekly$Direction,
+                positive = "Up")
+
+mean(test.pred == weekly$Direction)
+```
+
+The diagonal elements of the confusion matrix indicate correct predictions, while the off-diagonals represent incorrect predictions. Hence our model correctly predicted that the market would go up on 124 weeks and that it would go down on 18 days, for a total of 54 + 557 = 611 correct predictions. We also see that the model predicts 56.1% of the time. 
+
+# Question d
+
+```{r}
+roc.glm <- roc(weekly$Direction, test.pred.prob)
+
+plot(roc.glm, legacy.axes = TRUE, print.auc = TRUE)
+plot(smooth(roc.glm), col = 4, add = TRUE)
+```
+
+The AUC is 0.554. 
+
+# Question e
+
+```{r}
+train = (Weekly$Year < 2009)
+weekly_2008 = weekly[!train,1:2]
+Direction_2008 = weekly$Direction[!train]
+```
+
+```{r}
+glm.fit = glm(Direction ~ Lag1 + Lag2, data = weekly, family = binomial, subset = train)
+glm.probs = predict(glm.fit, weekly_2008, type = "response")
+
+test.pred <- rep("Down", length(glm.probs))
+test.pred[glm.probs > 0.5] <- "Up"
+```
+
+```{r}
+roc.glm <- roc(Direction_2008, glm.probs)
+plot(roc.glm, legacy.axes = TRUE, print.auc = TRUE)
+plot(smooth(roc.glm), col = 4, add = TRUE)
+```
+
+The AUC for the logistic regression model with just Lag1 and Lag2 is 0.529. 
+
+# Question f
+
+## LDA 
+
+```{r}
+lda.fit <- lda(Direction ~ Lag1 + Lag2, data = weekly, subset = train)
+plot(lda.fit)
+```
+
+Evaluate the test set performance using ROC.
+
+```{r}
+lda.pred <- predict(lda.fit, newdata = weekly_2008)
+
+roc.lda <- roc(Direction_2008, lda.pred$posterior[,2], 
+               levels = c("Down", "Up"))
+plot(roc.lda, legacy.axes = TRUE, print.auc = TRUE)
+```
+
+The AUC for LDA is 0.529. 
+
+## QDA
+
+```{r}
+# use qda() in MASS
+qda.fit <- qda(Direction ~ Lag1 + Lag2, data = weekly, subset = train)
+
+qda.pred <- predict(qda.fit, newdata = weekly_2008)
+
+roc.qda <- roc(Direction_2008, qda.pred$posterior[,2], 
+               levels = c("Down", "Up"))
+plot(roc.qda, legacy.axes = TRUE, print.auc = TRUE)
+```
+
+The AUC for QDA is 0.529.
+
+# Question g
+
+```{r, warning=FALSE}
+ctrl <- trainControl(method = "repeatedcv",
+                     repeats = 5,
+                     summaryFunction = twoClassSummary,
+                     classProbs = TRUE)
+
+set.seed(1)
+model.knn <- train(x = weekly[train,1:2],
+                   y = weekly$Direction[train],
+                   method = "knn",
+                   preProcess = c("center","scale"),
+                   tuneGrid = data.frame(k = seq(1, 50, by = 2)),
+                   trControl = ctrl,
+                   metric = 'ROC')
+
+ggplot(model.knn)
+```
+
+```{r}
+knn.pred <- predict(model.knn, newdata = weekly_2008, type = "prob")[,2]
+
+roc.knn <- roc(Direction_2008, knn.pred)
+plot(roc.knn, legacy.axes = TRUE, print.auc = TRUE)
+```
+
+AUC for the K Nearest Neighbor is 0.545. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
