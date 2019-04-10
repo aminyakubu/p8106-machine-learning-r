@@ -174,7 +174,7 @@ model.knn <- train(x = weekly[train,1:2],
                    y = weekly$Direction[train],
                    method = "knn",
                    preProcess = c("center","scale"),
-                   tuneGrid = data.frame(k = seq(1, 50, by = 2)),
+                   tuneGrid = data.frame(k = seq(1, 50, by = 1)),
                    trControl = ctrl,
                    metric = 'ROC')
 
@@ -191,8 +191,11 @@ plot(roc.knn, legacy.axes = TRUE, print.auc = TRUE)
 AUC for the K Nearest Neighbor is 0.545. 
 
 
+At first glance, it appears that the logistic regression model is working a little better than random guessing. However, this result is misleading because we trained and tested the model on the same set observations. In other words, 100 − 56.10652 = 43.893 % is the training error rate. The training error rate is often overly optimistic and it tends to underestimate the test error rate.
 
+In order to better assess the accuracy of the logistic regression model in this setting, we fit the model using part of the data, and then examined how well it predicts the held out data. This will yield a more realistic error rate. 
 
+The AUC provides a good way of comparing the perfomance of a classifier based of different cut off points. We expect the AUC of the held out data to be less or similar compared to the full dataset. We see that the AUC of the logistic model with the full data set is 0.557 and the AUC on the held out data is 0.554. 
 
 
 
