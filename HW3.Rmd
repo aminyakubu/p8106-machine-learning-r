@@ -123,7 +123,7 @@ plot(roc.glm, legacy.axes = TRUE, print.auc = TRUE)
 plot(smooth(roc.glm), col = 4, add = TRUE)
 ```
 
-The AUC for the logistic regression model with just Lag1 and Lag2 is 0.529. 
+The AUC for the logistic regression model with just Lag1 and Lag2 is 0.557. 
 
 # Question f
 
@@ -144,7 +144,7 @@ roc.lda <- roc(Direction_2008, lda.pred$posterior[,2],
 plot(roc.lda, legacy.axes = TRUE, print.auc = TRUE)
 ```
 
-The AUC for LDA is 0.529. 
+The AUC for LDA is 0.557. 
 
 ## QDA
 
@@ -189,7 +189,6 @@ plot(roc.knn, legacy.axes = TRUE, print.auc = TRUE)
 ```
 
 AUC for the K Nearest Neighbor is 0.545. 
-
 
 
 
