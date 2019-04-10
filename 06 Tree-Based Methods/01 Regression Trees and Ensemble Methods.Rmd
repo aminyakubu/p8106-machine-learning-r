@@ -10,16 +10,16 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r, echo = T, message = FALSE, results='hide', warning=FALSE}
 library(ISLR)
 library(caret)
-library(rpart)
+library(rpart) # Make plot of the decision trees
 library(rpart.plot)
-library(party)
-library(partykit)
-library(randomForest)
-library(ranger)
-library(gbm)
+library(party) # Conditional inference trees 
+library(partykit) # Visualize the CIT 
+library(randomForest) # implement the original RF. Was originally written in Fortran. Can be slow
+library(ranger) # This is also for RF but was written in C++ and must faster
+library(gbm) # For boosting models
 library(plotmo)
-library(pdp)
-library(lime)
+library(pdp) # to create partial dependence plot
+library(lime) # to provide interpreation on why a model gives a prediction. 
 ```
 
 Predict a baseball player’s salary on the basis of various statistics associated with performance in the previous year. Use `?Hitters` for more details.
