@@ -57,13 +57,6 @@ attach(weekly)
 ```
 
 ```{r}
-set.seed(1)
-rowTrain <- createDataPartition(y = weekly$Direction,
-                                p = 0.75,
-                                list = FALSE)
-```
-
-```{r}
 glm.fit = glm(Direction ~ ., data = weekly, family = binomial)
 summary(glm.fit)
 ```
@@ -134,7 +127,7 @@ lda.fit <- lda(Direction ~ Lag1 + Lag2, data = weekly, subset = train)
 plot(lda.fit)
 ```
 
-Evaluate the test set performance using ROC.
+Evaluating the test set performance using ROC.
 
 ```{r}
 lda.pred <- predict(lda.fit, newdata = weekly_2008)
@@ -195,10 +188,7 @@ At first glance, it appears that the logistic regression model is working a litt
 
 In order to better assess the accuracy of the logistic regression model in this setting, we fit the model using part of the data, and then examined how well it predicts the held out data. This will yield a more realistic error rate. 
 
-The AUC provides a good way of comparing the perfomance of a classifier based of different cut off points. We expect the AUC of the held out data to be less or similar compared to the full dataset. We see that the AUC of the logistic model with the full data set is 0.557 and the AUC on the held out data is 0.554. 
-
-
-
+The AUC provides a good way of comparing the perfomance of a classifier based of different cut off points. We expect the AUC of the held out data to be less or similar compared to the full dataset. We see that the AUC of the logistic model with the full data set is 0.557 and the AUC on the held out data is 0.554. AUC for the K Nearest Neighbor is 0.545. The best tune K is 7. The AUC for QDA is 0.529 and for LDA is 0.557. They all perform similarly because it is difficult to predict stock price changes simply based on the previous days (lag1 and lag2). Also, using the only lag1 and lag2, the p values using logistic regression are not significant for the subset of our data suggesting that lag1 and lag2 may not be associated with the direction. Predictors that are not associated with the outcome contribute to an increase in variance without corresponding decrease in the bias therefore perform inadequated when used for prediction. 
 
 
 
