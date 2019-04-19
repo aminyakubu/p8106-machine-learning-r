@@ -179,9 +179,11 @@ bst <- gbm(Salary~., Hitters,
            distribution = "gaussian",
            n.trees = 5000, 
            interaction.depth = 3,
-           shrinkage = 0.005,
+           shrinkage = 0.005, # This is the learning rate. Smaller is better. Small lr need large tree. (consider trade off)
            cv.folds = 10)
 ```
+
+There's a built in cross validation in gbm. 
 
 We plot loss function as a result of number of trees added to the ensemble.
 
@@ -190,6 +192,8 @@ nt <- gbm.perf(bst, method = "cv")
 nt
 ```
 
+The plot shows the performance of the fitted model as a function of the number of trees. The green line is the cross validation error and the black line is the training error. The dash line shows the optimal
+This only tunes the number of trees. 
 
 ## Grid search using `caret`
 
@@ -197,26 +201,28 @@ We use the fast implementation of random forest when tuning the model.
 
 ```{r}
 # Try more if possible
-rf.grid <- expand.grid(mtry = 1:6,
+rf.grid <- expand.grid(mtry = 1:6, # number of features you choose to split 
                        splitrule = "variance",
                        min.node.size = 1:6)
 set.seed(1)
 rf.fit <- train(Salary~., Hitters, 
-                method = "ranger",
+                method = "ranger", # the fast implementation of rf. it's better cos it allows three tuning parameters
                 tuneGrid = rf.grid,
                 trControl = ctrl)
 
 ggplot(rf.fit, highlight = TRUE)
 ```
 
+We can see that the rf is not very sensitive to tuning. That's an advantage cos u don't have to tune carefully unlike boosting.
+
 We then tune the `gbm` model.
 
 ```{r}
 # Try more 
 gbm.grid <- expand.grid(n.trees = c(2000,3000),
-                        interaction.depth = 2:10,
+                        interaction.depth = 2:10, # usually we don't go beyond 10
                         shrinkage = c(0.001,0.003,0.005),
-                        n.minobsinnode = 1)
+                        n.minobsinnode = 1 ) # the min number of observations in your node 
 set.seed(1)
 gbm.fit <- train(Salary~., Hitters, 
                  method = "gbm",
@@ -247,8 +253,10 @@ set.seed(1)
 rf2.final.per <- ranger(Salary~., Hitters,
                         mtry = 3, splitrule = "variance",
                         min.node.size = 5,
-                        importance = "permutation",
+                        importance = "permutation", 
                         scale.permutation.importance = TRUE) 
+
+# mtry and min.node.size number are chosen after tuning
 
 barplot(sort(ranger::importance(rf2.final.per), decreasing = FALSE), 
         las = 2, horiz = TRUE, cex.names = 0.7,
@@ -258,13 +266,18 @@ set.seed(1)
 rf2.final.imp <- ranger(Salary~., Hitters,
                         mtry = 3, splitrule = "variance",
                         min.node.size = 5,
-                        importance = "impurity") 
+                        importance = "impurity")  
+
+# impurity is another way to computing the importance 
 
 barplot(sort(ranger::importance(rf2.final.imp), decreasing = FALSE), 
         las = 2, horiz = TRUE, cex.names = 0.7,
         col = colorRampPalette(colors = c("darkred","white","darkblue"))(19))
 
 ```
+
+
+The variables with negative importance signifies including them can even increase the error. 
 
 Variable importance from boosting can be obtained using the `summary()` function.
 
