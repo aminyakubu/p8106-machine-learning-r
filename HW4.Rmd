@@ -95,11 +95,11 @@ bagging$results[which.min(bagging$results[,5]),]
 # Question 1d - Random Forest
 
 ```{r}
-rf.grid <- expand.grid(mtry = 1:7, 
+rf.grid = expand.grid(mtry = 1:7, 
                        splitrule = "variance",
                        min.node.size = 1:20) 
 set.seed(seed)
-rf.fit <- train(lpsa~., Prostate, 
+rf.fit = train(lpsa~., Prostate, 
                 method = "ranger",
                 tuneGrid = rf.grid,
                 trControl = ctrl,
@@ -117,12 +117,12 @@ rf.fit$results[which.min(rf.fit$results[,5]),]
 # Question 1e
 
 ```{r}
-gbm.grid <- expand.grid(n.trees = c(2000,3000, 5000),
+gbm.grid = expand.grid(n.trees = c(2000,3000, 5000),
                         interaction.depth = 2:10, 
                         shrinkage = c(0.01, 0.001,0.003,0.005),
                         n.minobsinnode = 1)
 set.seed(seed)
-gbm.fit <- train(lpsa ~., Prostate, 
+gbm.fit = train(lpsa ~., Prostate, 
                  method = "gbm",
                  tuneGrid = gbm.grid,
                  verbose = FALSE,
@@ -141,9 +141,103 @@ gbm.fit$results[which.min(gbm.fit$results[,5]),]
 
 # Question 1f
 
+```{r}
+resamp = resamples(list(rf = rf.fit, gbm = gbm.fit, bagging = bagging))
+summary(resamp)
+```
 
+# Question 2a
 
+```{r}
+data("OJ")
+```
 
+```{r}
+set.seed(seed)
+rowTrain = createDataPartition(y = OJ$Purchase,
+                                p = 0.747,
+                                list = FALSE)
 
+ctrl <- trainControl(method = "repeatedcv")
+                    # summaryFunction = twoClassSummary,
+                     # classProbs = TRUE)
 
+```
+
+```{r}
+set.seed(seed)
+rpart.class <- train(Purchase ~., OJ, 
+                   subset = rowTrain,
+                   method = "rpart",
+                   tuneGrid = data.frame(cp = exp(seq(-7,-2, len = 50))),
+                   trControl = ctrl,
+                   metric = "Accuracy")
+
+ggplot(rpart.class, highlight = T)
+rpart.plot(rpart.class$finalModel)
+```
+
+```{r}
+rpart.pred <- predict(rpart.class, newdata = OJ[-rowTrain,])
+
+confusionMatrix(rpart.pred,
+                reference = OJ$Purchase[-rowTrain])
+
+# Error rate
+cat(c("The error rate for the GBM model is", mean(rpart.pred != OJ$Purchase[-rowTrain])))
+```
+
+# Question 2b
+
+```{r}
+rf.grid <- expand.grid(mtry = 1:10,
+                       splitrule = "gini",
+                       min.node.size = 1:6)
+set.seed(seed)
+rf.class <- train(Purchase ~., OJ, 
+                subset = rowTrain,
+                method = "ranger",
+                tuneGrid = rf.grid,
+                metric = "Accuracy",
+                trControl = ctrl,
+                importance = 'permutation')
+
+ggplot(rf.class, highlight = TRUE)
+
+rf.pred = predict(rf.class, newdata = OJ[-rowTrain,])
+
+confusionMatrix(rf.pred,
+                reference = OJ$Purchase[-rowTrain])
+
+# Error rate
+cat(c("The error rate for the GBM model is", mean(rf.pred != OJ$Purchase[-rowTrain])))
+```
+
+# Question 3c
+
+```{r}
+gbmB.grid <- expand.grid(n.trees = c(2000,3000,4000),
+                        interaction.depth = 1:6,
+                        shrinkage = c(0.001,0.003,0.005),
+                        n.minobsinnode = 1)
+set.seed(seed)
+gbmB.fit <- train(Purchase ~., OJ, 
+                 subset = rowTrain, 
+                 tuneGrid = gbmB.grid,
+                 trControl = ctrl,
+                 method = "gbm",
+                 distribution = "adaboost",
+                 metric = "Accuracy",
+                 verbose = FALSE)
+
+ggplot(gbmB.fit, highlight = TRUE)
+
+gbm.pred = predict(gbmB.fit, newdata = OJ[-rowTrain,])
+
+confusionMatrix(gbm.pred,
+                reference = OJ$Purchase[-rowTrain])
+
+# Error rate
+cat(c("The error rate for the GBM model is", mean(gbm.pred != OJ$Purchase[-rowTrain])))
+```
 
