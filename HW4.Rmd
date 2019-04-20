@@ -1,0 +1,149 @@
+---
+title: "HW4"
+author: "Amin Yakubu"
+date: "4/19/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(lasso2)
+library(ISLR)
+library(caret)
+library(rpart)
+library(rpart.plot)
+library(party) 
+library(partykit) 
+library(randomForest) 
+library(ranger) 
+library(gbm) 
+library(plotmo)
+library(pdp) 
+library(lime)
+```
+
+# Question 1a
+
+```{r}
+seed = 1
+data("Prostate")
+ctrl <- trainControl(method = "cv")
+```
+
+Here, I fit a regression tree with lpsa as the response and the other variables as predictors, and then use cross-validation to determine the optimal tree size. I'll tune over complexity parameter. 
+
+```{r}
+set.seed(seed)
+
+tree <- rpart(formula = lpsa ~., data = Prostate,
+              control = rpart.control(cp = 0.001))
+rpart.plot(tree)
+
+cpTable <- printcp(tree)
+plotcp(tree)
+
+minErr <- which.min(cpTable[,4])
+```
+
+Tree size of 8 corresponds to the lowest cross validation error. 
+
+```{r}
+# Tree size = nsplit + 1
+cpTable[cpTable[,4] < cpTable[minErr,4] + cpTable[minErr,5], 2][1] + 1 
+```
+
+The tree size obtained using the 1 SE rule is tree of size 4. We can also see that from the plot since tree size of 4 is the leftmost value below the horizontal line. 
+
+There trees are different. 
+
+# Question 1b
+
+I'll select and prune my tree using the 1 SE 
+
+```{r}
+selected_tree = prune(tree, cp = cpTable[cpTable[,4] < cpTable[minErr,4] + cpTable[minErr,5], 1][1])
+rpart.plot(selected_tree)
+```
+
+The mean `lpsa` for observations with less than 2.5 of `lcavol` and further less than -0.48 of `lcavol` is 0.6. 9% of the total observations are in this terminal node. 
+
+# Question 1c - Bagging
+
+```{r}
+bagging.grid <- expand.grid(mtry = 8, 
+                       splitrule = "variance",
+                       min.node.size = 1:20) 
+set.seed(seed)
+bagging <- train(lpsa~., Prostate, 
+                method = "ranger",
+                tuneGrid = bagging.grid,
+                trControl = ctrl,
+                importance = 'permutation')
+
+ggplot(bagging, highlight = TRUE)
+
+barplot(sort(ranger::importance(bagging$finalModel), decreasing = FALSE), 
+        las = 2, horiz = TRUE, cex.names = 0.7,
+        col = colorRampPalette(colors = c("darkred","white","darkblue"))(19))
+
+bagging$results[which.min(bagging$results[,5]),]
+```
+
+# Question 1d - Random Forest
+
+```{r}
+rf.grid <- expand.grid(mtry = 1:7, 
+                       splitrule = "variance",
+                       min.node.size = 1:20) 
+set.seed(seed)
+rf.fit <- train(lpsa~., Prostate, 
+                method = "ranger",
+                tuneGrid = rf.grid,
+                trControl = ctrl,
+                importance = 'permutation')
+
+ggplot(rf.fit, highlight = TRUE)
+
+barplot(sort(ranger::importance(rf.fit$finalModel), decreasing = FALSE), 
+        las = 2, horiz = TRUE, cex.names = 0.7,
+        col = colorRampPalette(colors = c("darkred","white","darkblue"))(19))
+
+rf.fit$results[which.min(rf.fit$results[,5]),]
+```
+
+# Question 1e
+
+```{r}
+gbm.grid <- expand.grid(n.trees = c(2000,3000, 5000),
+                        interaction.depth = 2:10, 
+                        shrinkage = c(0.01, 0.001,0.003,0.005),
+                        n.minobsinnode = 1)
+set.seed(seed)
+gbm.fit <- train(lpsa ~., Prostate, 
+                 method = "gbm",
+                 tuneGrid = gbm.grid,
+                 verbose = FALSE,
+                 trControl = ctrl)
+
+ggplot(gbm.fit, highlight = TRUE)
+```
+
+```{r}
+summary(gbm.fit$finalModel, las = 2, cBars = 19, cex.names = 0.6)
+```
+
+```{r}
+gbm.fit$results[which.min(gbm.fit$results[,5]),]
+```
+
+# Question 1f
+
+
+
+
+
+
+
