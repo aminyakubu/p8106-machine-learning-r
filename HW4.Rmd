@@ -2,7 +2,7 @@
 title: "HW4"
 author: "Amin Yakubu"
 date: "4/19/2019"
-output: html_document
+output: pdf_document
 ---
 
 ```{r setup, include=FALSE}
@@ -40,7 +40,6 @@ set.seed(seed)
 
 tree <- rpart(formula = lpsa ~., data = Prostate,
               control = rpart.control(cp = 0.001))
-rpart.plot(tree)
 
 cpTable <- printcp(tree)
 plotcp(tree)
@@ -50,14 +49,14 @@ minErr <- which.min(cpTable[,4])
 
 Tree size of 8 corresponds to the lowest cross validation error. 
 
+Checking tree size which corresponds to the 1SE rule
+
 ```{r}
 # Tree size = nsplit + 1
 cpTable[cpTable[,4] < cpTable[minErr,4] + cpTable[minErr,5], 2][1] + 1 
 ```
 
-The tree size obtained using the 1 SE rule is tree of size 4. We can also see that from the plot since tree size of 4 is the leftmost value below the horizontal line. 
-
-There trees are different. 
+The tree size obtained using the 1 SE rule is tree of size 4. We can also see that from the plot since tree size of 4 is the leftmost value below the horizontal line. The tree corresponding to the lowest cross validation error (size 8) is different from the tree corresponding to the 1 SE rule (size 4)
 
 # Question 1b
 
@@ -89,10 +88,14 @@ barplot(sort(ranger::importance(bagging$finalModel), decreasing = FALSE),
         las = 2, horiz = TRUE, cex.names = 0.7,
         col = colorRampPalette(colors = c("darkred","white","darkblue"))(19))
 
-bagging$results[which.min(bagging$results[,5]),]
+# bagging$results[which.min(bagging$results[,5]),]
 ```
 
+From the variable important plot, we see that the 3 most important variables are `lcavol`, `lweight` and `svi`. 
+
 # Question 1d - Random Forest
+
+I'll randomly select between 1 to 7 of the variables for each split to see which number works best.  
 
 ```{r}
 rf.grid = expand.grid(mtry = 1:7, 
@@ -111,8 +114,10 @@ barplot(sort(ranger::importance(rf.fit$finalModel), decreasing = FALSE),
         las = 2, horiz = TRUE, cex.names = 0.7,
         col = colorRampPalette(colors = c("darkred","white","darkblue"))(19))
 
-rf.fit$results[which.min(rf.fit$results[,5]),]
+# rf.fit$results[which.min(rf.fit$results[,5]),]
 ```
+
+The best model used has `mtry` of 4 and `min.node.size` of 14 The result of the random forest shows that the most important variables are `lcavol`, `svi` and `lweight`. In this case `svi` is more important that `lweight`. 
 
 # Question 1e
 
@@ -131,22 +136,28 @@ gbm.fit = train(lpsa ~., Prostate,
 ggplot(gbm.fit, highlight = TRUE)
 ```
 
-```{r}
-summary(gbm.fit$finalModel, las = 2, cBars = 19, cex.names = 0.6)
-```
+The selected final model has 5000 trees with a depth of 2 with a learning rate (shrinkage) of 0.001. 
 
 ```{r}
-gbm.fit$results[which.min(gbm.fit$results[,5]),]
+summary(gbm.fit$finalModel, las = 2, cBars = 19, cex.names = 0.6)
+
+# gbm.fit$results[which.min(gbm.fit$results[,5]),]
 ```
+
+The most important variables using boosting are `lcavol`, `lweight` and `svi`. The order is similar to the bagging method. 
 
 # Question 1f
 
 ```{r}
 resamp = resamples(list(rf = rf.fit, gbm = gbm.fit, bagging = bagging))
 summary(resamp)
+
+bwplot(resamp, metric = "RMSE")
 ```
 
-# Question 2a
+I'll choose the regression tree method to predict PSA level. This is because we see that the cross validation is smallest for the bagging method (both using the 1SE rule and the mininum cross validation error). Also, in addition to having the smallest cross validation error it is easier to explain (more interpretable). 
+
+# Question 2a - Classification Tree
 
 ```{r}
 data("OJ")
@@ -159,10 +170,10 @@ rowTrain = createDataPartition(y = OJ$Purchase,
                                 list = FALSE)
 
 ctrl <- trainControl(method = "repeatedcv")
-                    # summaryFunction = twoClassSummary,
-                     # classProbs = TRUE)
 
 ```
+
+Since we are interested in missclassification rate, I'll use accuracy as the metric in the cross validation to select the model.
 
 ```{r}
 set.seed(seed)
@@ -175,7 +186,13 @@ rpart.class <- train(Purchase ~., OJ,
 
 ggplot(rpart.class, highlight = T)
 rpart.plot(rpart.class$finalModel)
+
+rpart.class$bestTune
 ```
+
+The best tree size is 4 (number of splits + 1) which corresponds to a complexity parameter of 0.01947204. 
+
+Now let's use the model to predict the test data. 
 
 ```{r}
 rpart.pred <- predict(rpart.class, newdata = OJ[-rowTrain,])
@@ -184,10 +201,12 @@ confusionMatrix(rpart.pred,
                 reference = OJ$Purchase[-rowTrain])
 
 # Error rate
-cat(c("The error rate for the GBM model is", mean(rpart.pred != OJ$Purchase[-rowTrain])))
+error_rate = mean(rpart.pred != OJ$Purchase[-rowTrain]) * 100
+
+cat(c("The error rate for the classification tree is", error_rate, '%'))
 ```
 
-# Question 2b
+# Question 2b - Random Forest
 
 ```{r}
 rf.grid <- expand.grid(mtry = 1:10,
@@ -204,16 +223,34 @@ rf.class <- train(Purchase ~., OJ,
 
 ggplot(rf.class, highlight = TRUE)
 
+```
+
+The selected model using cross validation has `mtry` of 5 `and min.node.size` of 5 as well. 
+
+Variable Importance
+```{r}
+barplot(sort(ranger::importance(rf.class$finalModel), decreasing = FALSE), 
+        las = 2, horiz = TRUE, cex.names = 0.7,
+        col = colorRampPalette(colors = c("darkred","white","darkblue"))(19))
+```
+
+From the variable important plot, we see that the variable `LoyalCH` is the most important. 
+
+Now let's use the random forest model selected using cross validation to predict the outcome for the test data
+
+```{r}
 rf.pred = predict(rf.class, newdata = OJ[-rowTrain,])
 
 confusionMatrix(rf.pred,
                 reference = OJ$Purchase[-rowTrain])
 
 # Error rate
-cat(c("The error rate for the GBM model is", mean(rf.pred != OJ$Purchase[-rowTrain])))
+error_rate = mean(rf.pred != OJ$Purchase[-rowTrain]) * 100
+
+cat(c("The error rate for the random forest model is", error_rate, '%'))
 ```
 
-# Question 3c
+# Question 3c - Boosting
 
 ```{r}
 gbmB.grid <- expand.grid(n.trees = c(2000,3000,4000),
@@ -231,13 +268,31 @@ gbmB.fit <- train(Purchase ~., OJ,
                  verbose = FALSE)
 
 ggplot(gbmB.fit, highlight = TRUE)
+```
 
+The selected model had a maximum tree depth of 3 and learning rate of 0.003 with 3000 boosting iterations. 
+
+```{r}
+summary(gbmB.fit$finalModel, las = 2, cBars = 19, cex.names = 0.6)
+```
+
+The variable importance is very similar that of random forest in that the most important variable is `LoyalCH`. 
+
+Next, I'll predict and compute the missclassification rate of the boosted model.
+
+```{r}
 gbm.pred = predict(gbmB.fit, newdata = OJ[-rowTrain,])
 
 confusionMatrix(gbm.pred,
                 reference = OJ$Purchase[-rowTrain])
 
 # Error rate
-cat(c("The error rate for the GBM model is", mean(gbm.pred != OJ$Purchase[-rowTrain])))
+error_rate = mean(gbm.pred != OJ$Purchase[-rowTrain]) * 100
+
+cat(c("The error rate for the GBM model is", error_rate,'%'))
 ```
+
+The missclassification rate for the GBM model (15.55%) is much better than the classification tree (18.518%) and the random forest (19.2592%). 
+
+
 
