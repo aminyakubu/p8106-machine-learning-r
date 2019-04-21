@@ -7,3 +7,4 @@ This repository contains topics in Statistical Machine Learning in R
 ### 4. Moving beyond linearity: Splines and GAM
 ### 5. Linear Methods for Classification
 ### 6. Tree-Based Methods
+### 7. Support Vector Machines
