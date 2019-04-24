@@ -88,7 +88,7 @@ barplot(sort(ranger::importance(bagging$finalModel), decreasing = FALSE),
         las = 2, horiz = TRUE, cex.names = 0.7,
         col = colorRampPalette(colors = c("darkred","white","darkblue"))(19))
 
-# bagging$results[which.min(bagging$results[,5]),]
+bagging$results[which.min(bagging$results[,5]),]
 ```
 
 From the variable important plot, we see that the 3 most important variables are `lcavol`, `lweight` and `svi`. 

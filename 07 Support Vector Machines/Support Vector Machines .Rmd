@@ -1,0 +1,155 @@
+---
+title: "Support Vector Machines"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, echo = T, message = FALSE, results='hide', warning=FALSE}
+library(mlbench)
+library(caret)
+library(e1071) # has function called tune.svm and svm function. `train` function in caret is more flexible
+```
+
+We use the Pima Indians Diabetes Database for illustration. The data contain 768 observations and 9 variables. The outcome is a binary variable `diabetes`. 
+
+```{r}
+data(PimaIndiansDiabetes)
+dat <- PimaIndiansDiabetes
+dat$diabetes <- factor(dat$diabetes, c("pos", "neg"))
+
+set.seed(1)
+rowTrain <- createDataPartition(y = dat$diabetes,
+                                p = 0.75,
+                                list = FALSE)
+```
+
+
+
+## Using `e1071`
+
+### Linear boundary
+Most real data sets will not be fully separable by a linear boundary. Support vector classifiers with a tuning parameter `cost`, which quantifies the penalty associated with having an observation on the wrong side of the classification boundary, can be used to build a linear boundary.
+```{r}
+set.seed(1)
+linear.tune <- tune.svm(diabetes~., 
+                        data = dat[rowTrain,], 
+                        kernel = "linear",
+                        cost = exp(seq(-5,1,len = 20))) # cost is the tuning parameter. Has to be non-negative
+
+# by defaut it does 10 fold cross-validation
+
+summary(linear.tune)
+
+best.linear <- linear.tune$best.model
+summary(best.linear)
+
+# C classification meaning we are using the tuning with cost. There's anohter called Nu classification. 
+# they are mostly equivalent.
+
+pred.linear <- predict(best.linear, newdata = dat[-rowTrain,])
+
+confusionMatrix(data = pred.linear, 
+                reference = dat$diabetes[-rowTrain])
+
+plot(best.linear, dat[rowTrain,], glucose ~ pressure, # the decision boundary. which two variables we are plotting. 
+     # so in this case we plot glucose and pressure. We need to fix the other six predictors at a constant value. 
+     # That's what we pass in the slice argument.
+     slice = list(pregnant = 5, triceps = 20,
+                  insulin = 20, mass = 25,
+                  pedigree = 1, age = 50),
+                  symbolPalette = c("orange","darkblue"),
+                  color.palette = terrain.colors)
+
+# In the plot, the x = are the support vectors. o = not support vectors. The background shows the decision boundary. 
+```
+
+### Radial kernel
+
+In real life the decision boundary might be linear so we can make a non linear boundary as well. 
+Support vector machines can construct classification boundaries that are nonlinear in shape. We use the radial kernel. Here we have 2 tuning parameters. 
+
+```{r}
+set.seed(1)
+radial.tune <- tune.svm(diabetes~., 
+                        data = dat[rowTrain,], 
+                        kernel = "radial", 
+                        cost = exp(seq(-4,5,len = 10)),
+                        gamma = exp(seq(-8,-3,len = 5))) # controns the bandwith of the kernel function 
+
+summary(radial.tune)
+
+
+best.radial <- radial.tune$best.model
+summary(best.radial)
+
+pred.radial <- predict(best.radial, newdata = dat[-rowTrain,])
+
+confusionMatrix(data = pred.radial, 
+                reference = dat$diabetes[-rowTrain])
+
+plot(best.radial, dat[rowTrain,], glucose~pressure,
+     slice = list(pregnant = 5, triceps = 20,
+                  insulin = 20, mass = 25,
+                  pedigree = 1, age = 40),
+     symbolPalette = c("orange","darkblue"),
+     color.palette = terrain.colors)
+
+
+```   
+     
+## Using `caret`
+
+Caret is recommended. It is more flexible
+
+```{r}
+ctrl <- trainControl(method = "cv")
+
+set.seed(1)
+svml.fit <- train(diabetes~., 
+                  data = dat[rowTrain,], 
+                  method = "svmLinear2", # This uses the svm function in e1071 package. 
+                  # you can specify svmlinear and then change cost to C. This is from a different package. Not e1071
+                  preProcess = c("center", "scale"), # This is done by default in svm function. 
+                  tuneGrid = data.frame(cost = exp(seq(-5,1,len=20))),
+                  trControl = ctrl)
+
+# In SVM we don't get probabilities so we just use accuracy. 
+
+ggplot(svml.fit, highlight = TRUE)
+```
+
+
+```{r}
+svmr.grid <- expand.grid(C = exp(seq(-4,5,len=10)),
+                         sigma = exp(seq(-8,-3,len=5))) # This sigma is the same as gamma in the svm function
+set.seed(1)             
+svmr.fit <- train(diabetes~., dat, 
+                  subset = rowTrain,
+                  method = "svmRadial", 
+                  preProcess = c("center", "scale"),
+                  tuneGrid = svmr.grid,
+                  trControl = ctrl)
+
+ggplot(svmr.fit, highlight = TRUE)
+```
+
+```{r}
+resamp <- resamples(list(svmr = svmr.fit, svml = svml.fit))
+bwplot(resamp)
+```
+
+# Test data performance
+We finally look at the test data performance.
+```{r}
+pred.svml <- predict(svml.fit, newdata = dat[-rowTrain,])
+pred.svmr <- predict(svmr.fit, newdata = dat[-rowTrain,])
+
+confusionMatrix(data = pred.svml, 
+                reference = dat$diabetes[-rowTrain])
+
+confusionMatrix(data = pred.svmr, 
+                reference = dat$diabetes[-rowTrain])
+```
