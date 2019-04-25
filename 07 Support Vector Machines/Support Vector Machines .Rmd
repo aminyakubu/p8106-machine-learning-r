@@ -113,18 +113,18 @@ svml.fit <- train(diabetes~.,
                   method = "svmLinear2", # This uses the svm function in e1071 package. 
                   # you can specify svmlinear and then change cost to C. This is from a different package. Not e1071
                   preProcess = c("center", "scale"), # This is done by default in svm function. 
-                  tuneGrid = data.frame(cost = exp(seq(-5,1,len=20))),
+                  tuneGrid = data.frame(cost = exp(seq(-5,1,len = 20))),
                   trControl = ctrl)
 
-# In SVM we don't get probabilities so we just use accuracy. 
+# In SVM we don't usually use probabilities, although we can get probabilities, so we just use accuracy. THe probabilities are questionable (new methods)
 
 ggplot(svml.fit, highlight = TRUE)
 ```
 
 
 ```{r}
-svmr.grid <- expand.grid(C = exp(seq(-4,5,len=10)),
-                         sigma = exp(seq(-8,-3,len=5))) # This sigma is the same as gamma in the svm function
+svmr.grid <- expand.grid(C = exp(seq(-4, 5, len = 10)),
+                         sigma = exp(seq(-8,-3, len = 5))) # This sigma is the same as gamma in the svm function
 set.seed(1)             
 svmr.fit <- train(diabetes~., dat, 
                   subset = rowTrain,

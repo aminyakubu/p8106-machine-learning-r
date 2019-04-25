@@ -1,0 +1,121 @@
+---
+title: "HW5"
+author: "Amin Yakubu"
+date: "4/24/2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(ISLR)
+library(mlbench)
+library(caret)
+library(e1071) 
+```
+
+# Data
+
+```{r}
+data(OJ)
+seed = 1
+
+set.seed(seed)
+rowTrain = createDataPartition(y = OJ$Purchase,
+                                p = 0.747,
+                                list = FALSE)
+
+ctrl <- trainControl(method = "repeatedcv")
+```
+
+# Question A
+
+```{r}
+set.seed(1)
+svml.fit <- train(Purchase ~., 
+                  data = OJ[rowTrain,], 
+                  method = "svmLinear2",
+                  preProcess = c("center", "scale"), 
+                  tuneGrid = data.frame(cost = exp(seq(-10,1, len = 50))),
+                  trControl = ctrl)
+
+ggplot(svml.fit, highlight = TRUE)
+
+```
+
+Training error using the training data
+
+```{r}
+pred.svml_training <- predict(svml.fit, newdata = OJ[rowTrain,])
+
+confusionMatrix(data = pred.svml_training, 
+                reference = OJ$Purchase[rowTrain])
+
+training_error_rate = mean(pred.svml_training != OJ$Purchase[rowTrain]) * 100
+training_error_rate
+```
+
+Test error using the held-out data
+
+```{r}
+pred.svml_testing <- predict(svml.fit, newdata = OJ[-rowTrain,])
+
+confusionMatrix(data = pred.svml_testing, 
+                reference = OJ$Purchase[-rowTrain])
+
+testing_error_rate = mean(pred.svml_testing != OJ$Purchase[-rowTrain]) * 100
+testing_error_rate
+```
+
+# Question B
+
+```{r}
+svmr.grid <- expand.grid(C = exp(seq(-5, 2, len = 10)),
+                         sigma = exp(seq(-6,-2, len = 10))) # This sigma is the same as gamma in the svm function
+set.seed(1)             
+svmr.fit <- train(Purchase ~., OJ, 
+                  subset = rowTrain,
+                  method = "svmRadial", 
+                  preProcess = c("center", "scale"),
+                  tuneGrid = svmr.grid,
+                  trControl = ctrl)
+
+ggplot(svmr.fit, highlight = TRUE)
+```
+
+Now let's see what the training error rate is for the support vector machine with a radial kernel. 
+
+```{r}
+pred.svmr_training <- predict(svmr.fit, newdata = OJ[rowTrain,])
+
+confusionMatrix(data = pred.svmr_training, 
+                reference = OJ$Purchase[rowTrain])
+
+radial_training_error_rate = mean(pred.svmr_training != OJ$Purchase[rowTrain]) * 100
+radial_training_error_rate
+```
+
+Now let's find out the testing error rate
+
+```{r}
+pred.svmr_testing <- predict(svmr.fit, newdata = OJ[-rowTrain,])
+
+confusionMatrix(data = pred.svmr_testing, 
+                reference = OJ$Purchase[-rowTrain])
+
+radial_testing_error_rate = mean(pred.svmr_testing != OJ$Purchase[-rowTrain]) * 100
+radial_testing_error_rate
+```
+
+# Question C
+
+```{r}
+resamp <- resamples(list(svmr = svmr.fit, svml = svml.fit))
+bwplot(resamp)
+```
+
+Based on the cross validation results from resamples, we see that the radial kernel has a higher a accuracy and therefore will be the preffered model in this case. 
+
+
