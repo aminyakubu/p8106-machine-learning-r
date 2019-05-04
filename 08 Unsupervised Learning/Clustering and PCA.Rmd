@@ -12,19 +12,18 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r, echo = T, message = FALSE, results='hide', warning=FALSE}
-library(ISLR)
-library(factoextra)
+library(factoextra) # provides viz tools for clustering and pca. The fuctions are in base R. 
 library(gridExtra)
 library(corrplot)
 library(RColorBrewer) 
-library(gplots)
+library(gplots) # For heatmaps
 ```
 
 The dataset we use contains data on 166 first generation Pokemon, including their names and basic stats: HP, Attack, Defense, Special Attack, Special Defense, and Speed. The data is from Kaggle (https://www.kaggle.com/abcsds/pokemon). We will apply unsupervised learning methods on this data. The list of Pokemon can be found at (https://pokemondb.net/pokedex/national).
 
 
 ```{r}
-dat <- read.csv("data/Pokemon.csv")
+dat <- read.csv("Pokemon.csv")
 dat1 <- dat[,2:7]
 dat1 <- scale(dat1)
 rownames(dat1) <- dat[,1]
@@ -37,19 +36,21 @@ Partitioning methods such as k-means clustering require the users to specify the
 ```{r, fig.height=3.5}
 fviz_nbclust(dat1,
              FUNcluster = kmeans,
-             method = "silhouette")
+             method = "silhouette") 
 set.seed(1)
-km <- kmeans(dat1, centers = 2, nstart = 20)
+km <- kmeans(dat1, centers = 2, nstart = 20) # centers = 2 means k = 2. we are starting from 20. 
 ```
 
-The function `fviz_cluster` provides ggplot2-based visualization of partitioning methods including K means. Observations are represented by points in the plot, using principal components if $p > 2$. An ellipse is drawn around each cluster.
+The function `fviz_cluster()` provides ggplot2-based visualization of partitioning methods including K means. Observations are represented by points in the plot, using principal components if $p > 2$. An ellipse is drawn around each cluster.
 
 ```{r}
 km_vis <- fviz_cluster(list(data = dat1, cluster = km$cluster), 
-                        ellipse.type = "convex", geom = "point", 
+                        ellipse.type = "convex", geom = c("point", 'text'), labelsize = 5,
                         palette = "Dark2") + labs(title = "K-means") 
 
 km_vis
+
+# The method above plots just the 2 principal components. We calculate the 1st and 2nd PC of each variable. 
 ```
 
 # Hierarchical clustering
@@ -57,7 +58,8 @@ km_vis
 We can also apply hierarchical clustering on this data. Here we use the Euclidean distance and different types of linkage.
 
 ```{r}
-hc.complete <- hclust(dist(dat1), method = "complete")
+hc.complete <- hclust(dist(dat1), method = "complete") 
+# dist is the distance between the observations. Eucledian distance is the default. We can also use manhattan or minkowski. 
 hc.average <- hclust(dist(dat1), method = "average")
 hc.single <- hclust(dist(dat1), method = "single")
 hc.centroid <- hclust(dist(dat1), method = "centroid")
@@ -66,18 +68,23 @@ hc.centroid <- hclust(dist(dat1), method = "centroid")
 The function `fviz_dend()` can be applied to visualize the dendrogram.
 
 ```{r, fig.width=7}
-fviz_dend(hc.complete, k = 4,        
-          cex = 0.3, 
-          palette = "jco", 
-          color_labels_by_k = TRUE,
-          rect = TRUE, rect_fill = TRUE, rect_border = "jco",
-          labels_track_height = 2.5)
+fviz_dend(hc.complete, k = 4, # you will get 4 clusters or subgroups
+          cex = 0.3, # This is for the font size of the labels. 
+          palette = "jco", # used to specify the theme or color
+          color_labels_by_k = TRUE, # specify whether to color labels or not
+          rect = TRUE, # draws the rectangles
+          rect_fill = TRUE, # fills rectangle by its color
+          rect_border = "jco",
+          labels_track_height = 2.5 # change height so we can fully display names of pokemon
+          )
 
-ind4.complete <- cutree(hc.complete, 4)
+ind4.complete <- cutree(hc.complete, 4) # return the index of the cluster
 
 # Who are in the fourth cluster?
 dat[ind4.complete == 4,]
 ```
+
+You can inspect the clusters to understand why the pokemon fall in their respective clusters. 
 
 To display more details, we show the heatmap of the data.
 
@@ -86,32 +93,41 @@ To display more details, we show the heatmap of the data.
 col1 <- colorRampPalette(brewer.pal(9, "GnBu"))(100)
 col2 <- colorRampPalette(brewer.pal(3, "Spectral"))(2)
 
-heatmap.2(t(dat1), 
-          col = col1, keysize=.8, key.par = list(cex=.5),
+heatmap.2(t(dat1), # We need to use the transpose of the data, so we have a diagram similar to the previous one.
+          col = col1, keysize = .8, key.par = list(cex = .5),
           trace = "none", key = TRUE, cexCol = 0.75, 
           labCol = as.character(dat[,1]),
-          ColSideColors = col2[as.numeric(dat[,"Legendary"])+1],
+          ColSideColors = col2[as.numeric(dat[,"Legendary"]) + 1],
           margins = c(10, 10))
 ```
+
+Each row corresponds to one feature. Each column corresponds to a pokemon(obsevation). The dendograms above are the same. 
 
 # PCA
 
 The function `prcomp()` can be used to perform PCA.
 
 ```{r, fig.height=3}
-pca <- prcomp(dat1, scale. = TRUE)
-pca$rotation
-pca$sdev
+pca <- prcomp(dat1) # remember we have scaled the data previously
+pca$rotation 
+# gives the matrix V = (phi1, phi2...phi_p). In our case, p =6. You call the eigenvalues or factor loadings. In this case they are just correlation. 
 
-var <- get_pca_var(pca)
-corrplot(var$cor)
+pca$sdev # stand dev of each principal component. 
+
+pca$rotation %*% diag(pca$sdev) 
+
+corrplot(pca$rotation %*% diag(pca$sdev)) # each element is the correlation between  the variable and the princ component. Eg. the first thing shows the correlation between hitpoint and the principal component. We see that all the variables play a big role in the 1st PC. and speical defense is the most important. For the 2nd PC, Speed plays an important role. 
+
+var <- get_pca_var(pca) 
+corrplot(var$cor) # This is exactly the same as the previous plot. You can use any of them. 
 ```
 
 The function `fviz_eig()` plots the eigenvalues/variances against the number of dimensions. 
 
-```{r, fig.height=3}
+```{r, fig.height=4}
 fviz_eig(pca, addlabels = TRUE)
 ```
+
 
 The function `fviz_contrib()` can be used to visualize the contribution of variables from the results of PCA.
 
@@ -121,11 +137,31 @@ b <- fviz_contrib(pca, choice = "var", axes = 2)
 grid.arrange(a, b, nrow = 2)
 ```
 
+Here we are visualizing the contribution of each variable. We are plotting the rotation matrix which is just the square of the rotation matrix and then plot. The red line shows the average. In our case, it's 100/6 (we have 6 variables). The dim are are the principal components. 
+
 The function `fviz_pca_biplot()` can be used to obtain the biplot of individuals and variables.
 
-```{r, fig.width=6}
-fviz_pca_biplot(pca, axes = c(1,2),
-                habillage = ifelse(dat$Legendary==TRUE, "Legendary","Not legendary"),
-                label = c("var"),
+```{r, fig.height=4}
+fviz_pca_biplot(pca, axes = c(1,2), # specifies which PCs plot
+                habillage = ifelse(dat$Legendary == TRUE, "Legendary","Not legendary"), # this is for group lable
+                label = c("var"), 
+              # We only variable the variable names without the observation names. Use individual for obsevation names.
                 addEllipses = TRUE) 
+
+fviz_pca_var(pca, col.var = "steelblue", repel = TRUE)
+
+fviz_pca_ind(pca,
+             habillage = ifelse(dat$Legendary == TRUE,"Legendary","Not legendary"),
+             label = "none",
+             addEllipses = TRUE)
+
+# for fviz_pca_ind for individual plots ?????????????????????????????/
 ```
+
+The plot shows the PC scores. The arrows or vectors plot the correlation loading. If  the is closer to the xaxis (close to 1) it means it highly correlated with the 1st PC and less correlated with the 2nd PC. 
+
+If we have just 2 variables, then the arrows will touch the cicle. 
+
+Because they add up to 1. We don't care about the positive or negative sign for phi. 
+
+as.dist(1-cor(t(x))) - Refere to ISL page 407

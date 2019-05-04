@@ -1,0 +1,276 @@
+---
+title: "HW6"
+author: "Amin Yakubu"
+date: "5/4/2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(message = FALSE)
+knitr::opts_chunk$set(warning = FALSE)
+```
+
+```{r}
+library(ISLR)
+library(factoextra) 
+library(gridExtra)
+library(corrplot)
+library(RColorBrewer) 
+library(gplots) 
+library(igraph)
+library(jpeg)
+library(imager)
+```
+
+# Data preprocessing
+
+```{r}
+data("USArrests")
+seed = 1
+usarrests = scale(USArrests)
+```
+
+# Cluster Analysis
+
+## Question a -- Without Scaling
+
+```{r}
+set.seed(seed)
+hc_noscale = hclust(dist(USArrests, method = 'euclidean'), method = 'complete')
+```
+
+## Question b
+```{r}
+hc_3_noscale = cutree(hc_noscale, 3) 
+```
+
+### States in the first Cluster
+```{r}
+USArrests[hc_3_noscale == 1,]
+```
+
+### States in the 2nd Cluster
+```{r}
+USArrests[hc_3_noscale == 2,]
+```
+
+### States in the 3rd Cluster
+
+```{r}
+USArrests[hc_3_noscale == 3,]
+```
+
+Visualization of the dendrogram and showing graphically which states belong to which clusters
+
+```{r}
+fviz_dend(hc_noscale, k = 3,
+          cex = 0.5,  
+          palette = "lancet", 
+          color_labels_by_k = TRUE, 
+          rect = TRUE, 
+          rect_fill = TRUE, 
+          rect_border = "jco", 
+          type = 'rectangle',
+          labels_track_height = 60.5
+          )
+```
+
+## Question c
+
+```{r}
+set.seed(seed)
+hc_scaled = hclust(dist(usarrests, method = 'euclidean'), method = 'complete')
+```
+
+```{r}
+fviz_dend(hc_scaled, k = 3,
+          cex = 0.6,  
+          palette = "lancet", 
+          color_labels_by_k = TRUE, 
+          rect = TRUE, 
+          rect_fill = TRUE, 
+          rect_border = "jco", 
+          type = 'rectangle',
+          labels_track_height = 1.5
+          )
+```
+
+
+## Question d
+
+```{r}
+# number of states in each cluster when scaling
+table(cutree(hc_scaled, 3))
+
+# number of states in each cluster when not scaling
+table(cutree(hc_noscale, 3))
+```
+
+Scaling the variables impacts the clusters that are obtained, the branch lengths, and the height of the tree. So, scaling or not scaling affects the clusters obtained from cutting the dendogram into 3 clusters as shown in the `table function` above. It is obvious that the states and the number of states in the clusters are different. For example, without scaling, Michigan clusters with Nevada while with scaling Michigan clusters nearby Arizona. The height of the unscaled tree is 300 while the height of the scaled tree is 6.  Without scaling, we cut the tree at a height of about 150 whereas we cut the scaled tree at a height of about 4 to obtain 3 clusters.
+
+In this scenario, scaling is more appropriate because `Murder`, `Assault`, and `Rape` all have units of per 100,000 people while `UrbanPop` is the percentage of the state population that lives in urban areas.  Therefore, it is imporant to scale so that the units of `UrbanPop` has an equal contribution to the hierarchical clustering algorithm as the other variables. We will find more meaningful results when the variables are scaled to proportional units.
+
+# PCA
+
+```{r}
+img <- readJPEG('cat.jpg')
+
+plot(load.image('cat.jpg'))
+
+dim(img)
+
+r <- img[,,1]
+g <- img[,,2]
+b <- img[,,3]
+
+img.r.pca <- prcomp(r, center = FALSE)
+img.g.pca <- prcomp(g, center = FALSE)
+img.b.pca <- prcomp(b, center = FALSE)
+
+rgb.pca <- list(img.r.pca, img.g.pca, img.b.pca)
+
+# Approximate X with XV_kV_k^T
+compress <- function(pr, k)
+{
+  compressed.img <- pr$x[,1:k] %*% t(pr$rotation[,1:k])
+  compressed.img
+}
+
+# Using first 20 PCs
+pca20 <- sapply(rgb.pca, compress, k = 20, simplify = "array")
+
+writeJPEG(pca20, "pca20.jpg")
+
+# Try to increase the number of PCs!
+
+plot(load.image('pca20.jpg'))
+```
+
+## Using Parrot image
+
+```{r}
+plot(load.image('parrot.jpg'))
+
+img <- readJPEG('parrot.jpg')
+
+dim(img)
+
+r <- img[,,1]
+g <- img[,,2]
+b <- img[,,3]
+
+img.r.pca <- prcomp(r, center = FALSE)
+img.g.pca <- prcomp(g, center = FALSE)
+img.b.pca <- prcomp(b, center = FALSE)
+
+rgb.pca <- list(img.r.pca, img.g.pca, img.b.pca)
+
+# Approximate X with XV_kV_k^T
+compress <- function(pr, k)
+{
+  compressed.img <- pr$x[,1:k] %*% t(pr$rotation[,1:k])
+  compressed.img
+}
+
+# Using first PC
+p1 <- sapply(rgb.pca, compress, k = 1, simplify = "array")
+writeJPEG(p1, "parrot1.jpg")
+plot(load.image('parrot1.jpg'))
+
+# Using first 10 PCs
+p10 <- sapply(rgb.pca, compress, k = 10, simplify = "array")
+writeJPEG(p10, "parrot10.jpg")
+plot(load.image('parrot10.jpg'))
+
+# Using first 50 PCs
+p50 <- sapply(rgb.pca, compress, k = 50, simplify = "array")
+writeJPEG(p50, "parrot50.jpg")
+plot(load.image('parrot50.jpg')) 
+
+# Using first 100 PCs
+p100 <- sapply(rgb.pca, compress, k = 100, simplify = "array")
+writeJPEG(p100, "parrot100.jpg")
+plot(load.image('parrot100.jpg')) 
+
+# Using first 200 PCs
+p200 <- sapply(rgb.pca, compress, k = 200, simplify = "array")
+writeJPEG(p200, "parrot200.jpg")
+plot(load.image('parrot200.jpg')) 
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

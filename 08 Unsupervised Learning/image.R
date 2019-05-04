@@ -1,6 +1,6 @@
 library(jpeg)
 
-img <- readJPEG('data/cat.jpg')
+img <- readJPEG('cat.jpg')
 
 dim(img)
 
@@ -24,8 +24,10 @@ compress <- function(pr, k)
 # Using first 20 PCs
 pca20 <- sapply(rgb.pca, compress, k = 20, simplify = "array")
 
-writeJPEG(pca20, "pca20.jpeg")
+writeJPEG(pca20, "pca20.jpg")
 
 # Try to increase the number of PCs!
+
+plot(load.image('pca20.jpg'))
 
 
