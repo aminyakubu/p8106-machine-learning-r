@@ -1,0 +1,93 @@
+---
+title: "Vanilla Neural Networks"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, echo = T, message = FALSE, results='hide', warning=FALSE}
+library(ISLR)
+library(mlbench)
+library(caret)
+library(pROC)
+```
+
+## Regression
+
+We fit a single-hidden-layer neural network to the `Hitters` data.
+
+```{r}
+data(Hitters)
+Hitters <- na.omit(Hitters)
+x <- model.matrix(Salary~., Hitters)[,-1]
+y <- Hitters$Salary
+```
+
+### Using caret
+
+```{r, message=FALSE}
+ctrl <- trainControl(method = "cv")
+
+nnetGrid <- expand.grid(size = seq(from = 5, to = 40, by = 5), 
+                        decay = exp(seq(from = -5, to = -1, length = 10)))
+
+set.seed(1)
+rnnet.fit <- train(x = x, y = y,
+                   method = "nnet",
+                   tuneGrid = nnetGrid,
+                   preProcess = c("center","scale"),
+                   trControl = ctrl,
+                   linout = TRUE,
+                   trace = FALSE)
+ggplot(rnnet.fit, highlight = TRUE) + scale_shape_manual(values = rep(19,10), 
+                                                         guide = FALSE)
+```
+
+
+## Classification
+
+We next consider the diabetes data and fit a single-hidden-layer neural network on this dataset.
+
+```{r}
+data(PimaIndiansDiabetes)
+dat <- PimaIndiansDiabetes
+dat$diabetes <- factor(dat$diabetes, c("pos", "neg"))
+
+set.seed(1)
+rowTrain <- createDataPartition(y = dat$diabetes,
+                                p = 0.75,
+                                list = FALSE)
+```
+
+### Using caret
+
+```{r, message = FALSE}
+nnetGrid <- expand.grid(size = seq(from = 1, to = 12, by = 1), 
+                        decay = exp(seq(from = -3, to = 1, length = 10)))
+
+ctrl2 <- trainControl(method = "cv", summaryFunction = twoClassSummary,
+                      classProbs = TRUE)
+
+set.seed(1)
+cnnet.fit <- train(diabetes~., dat, 
+                   subset = rowTrain, 
+                   method = "nnet",
+                   tuneGrid = nnetGrid,
+                   preProcess = c("center","scale"),
+                   trControl = ctrl2,
+                   metric = "ROC",
+                   trace = FALSE)
+
+ggplot(cnnet.fit, highlight = TRUE) + scale_shape_manual(values = rep(19,10), 
+                                                         guide = FALSE)
+```
+
+
+```{r}
+cnnet.pred <- predict(cnnet.fit, newdata = dat[-rowTrain,], type = "prob")[,1]
+roc.cnnet <- roc(dat$diabetes[-rowTrain], cnnet.pred)
+plot(roc.cnnet, print.auc=TRUE)
+```
+
