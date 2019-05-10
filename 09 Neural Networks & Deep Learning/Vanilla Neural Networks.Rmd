@@ -28,23 +28,27 @@ y <- Hitters$Salary
 ### Using caret
 
 ```{r, message=FALSE}
-ctrl <- trainControl(method = "cv")
+ctrl <- trainControl(method = "cv") 
 
-nnetGrid <- expand.grid(size = seq(from = 5, to = 40, by = 5), 
-                        decay = exp(seq(from = -5, to = -1, length = 10)))
+nnetGrid <- expand.grid(size = seq(from = 5, to = 40, by = 5), # The number of hidden layers. 5 hidden units to 40. 
+                        decay = exp(seq(from = -5, to = -1, length = 10))) # This is the weight decay. When it's large we are penalizing more
 
 set.seed(1)
 rnnet.fit <- train(x = x, y = y,
                    method = "nnet",
                    tuneGrid = nnetGrid,
-                   preProcess = c("center","scale"),
+                   preProcess = c("center","scale"), # good to center and scale for linear combinations
                    trControl = ctrl,
-                   linout = TRUE,
-                   trace = FALSE)
+                   linout = TRUE, # Linear output. Sigmoid output function is the default. If you are doing regression you don't have to use the sigmoid output function which doesn't make sense. Use ?nnet for more. 
+                   trace = FALSE) # To prevent printing out the progress of the algorithm
+
 ggplot(rnnet.fit, highlight = TRUE) + scale_shape_manual(values = rep(19,10), 
-                                                         guide = FALSE)
+                                                         guide = FALSE) 
+
+# by default it gives you six shapes for points. So if you have more ggplot will throw out a warning. You can use scale_shape_manual for more. 
 ```
 
+For more layers, you can use mxnet function. 
 
 ## Classification
 
@@ -84,10 +88,11 @@ ggplot(cnnet.fit, highlight = TRUE) + scale_shape_manual(values = rep(19,10),
                                                          guide = FALSE)
 ```
 
+We don't need to make any changes because by default caret uses the sigmoid function which is fine for classification. 
 
 ```{r}
 cnnet.pred <- predict(cnnet.fit, newdata = dat[-rowTrain,], type = "prob")[,1]
 roc.cnnet <- roc(dat$diabetes[-rowTrain], cnnet.pred)
-plot(roc.cnnet, print.auc=TRUE)
+plot(roc.cnnet, print.auc = TRUE)
 ```
 

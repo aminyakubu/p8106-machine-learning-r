@@ -39,7 +39,7 @@ test_x <- test_x/255
 train_x <- train_x[1:10000,]
 train_y <- train_y[1:10000]
 
-train_y_c <- to_categorical(train_y, 10)
+train_y_c <- to_categorical(train_y, 10) # used to convert 0-9 vector to a matrix of 0,2..9. If your observation is 9, then it's assigned 1 and 0 everywhere else. 
 test_y_c <- to_categorical(test_y, 10)
 ```
 
@@ -69,25 +69,27 @@ plotTrain <- function(images)
   par(op) 
 }
 
-plotTrain(1:36)
+plotTrain(1:36) # plot the first 36. The label is also shown in the corner
 ```
 
 # Model
-We now create our basic network architecture: two hidden layers with 256 and 128 nodes respectively with both hidden layers using ReLU activation functions. To do this, we create a sequential model and then adding layers using the pipe (%>%) operator. The function `layer_dense()` ddd a densely-connected layer to an output. We use the softmax activation for the output layer to compute the probabilities for the classes. Moreover, dropout is one of the most effective and commonly used approaches to prevent overfitting in neural networks. Dropout randomly drops out (setting to zero) a number of output features in a layer during training. We apply drop out with `layer_dropout()`.
+We now create our basic network architecture: two hidden layers with 100 and 50 nodes respectively with both hidden layers using ReLU activation functions. To do this, we create a sequential model and then adding layers using the pipe (%>%) operator. The function `layer_dense()` ddd a densely-connected layer to an output. Densely-connected layer means that  each of the input is conncect to the units in the next layer. There are no missing edges. We use the softmax activation for the output layer to compute the probabilities for the classes. Moreover, dropout is one of the most effective and commonly used approaches to prevent overfitting in neural networks. Dropout randomly drops out (setting to zero) a number of output features in a layer during training. We apply drop out with `layer_dropout()`. This does one thing called drop out. It is used to prevent overfitting. During the training proceduure. We take a random sample of these hidden units and treat them as the input of the next layer. 
 
 ```{r}
-model <- keras_model_sequential()
+model <- keras_model_sequential() # this is to initialize the model. 
 
-model %>% layer_dense(units = 100, activation ="relu", input_shape = ncol(train_x))  %>%
+model %>% layer_dense(units = 100, activation = "relu", input_shape = ncol(train_x))  %>% # 1st hidden layer. has 100 units. You can also add l1 or l2 regulariation is also available. 
           layer_dropout(rate = 0.2) %>%
-          layer_dense(units = 50, activation = "relu") %>%
-          layer_dropout(rate = 0.2) %>%
-          layer_dense(units = 10, activation = "softmax") 
+          layer_dense(units = 50, activation = "relu") %>% # 2nd layer. this has 50 units. you can use sigmoid in the activation. 
+          layer_dropout(rate = 0.2) %>% # drop out layer of 20%. So each time we keep 80% of the units
+          layer_dense(units = 10, activation = "softmax") # he the activation function is now softmax since we are doing classification. So we will have 10 units since we have 10 categories. 
 
 summary(model)
 ```
 
-To incorporate backpropagation, we add `compile()` to our code sequence. 
+ The # of param is obtained by (784 +1) * 100. Cos we have 100 units. it's 784 plus the intercept (bias). 
+
+To incorporate backpropagation, we add `compile()` to our code sequence. T
 
 ```{r}
 model %>% compile(loss = "categorical_crossentropy",
@@ -98,10 +100,10 @@ model %>% compile(loss = "categorical_crossentropy",
 Now we have created a model, then we just need to train it with our data. We feed our model into the `fit()` function along with our training data. The neural network will run through the mini-batch gradient descent process; the values of `batch_size` are typically provided as a power of two that fit nicely into the memory requirements of the GPU or CPU hardware. An `epoch` describes the number of times the algorithm sees the entire data set. By setting `validation_split = 0.2`, we train our model on 80% of training set and will evaluate the model using the other 20% so that we can compute a more accurate estimate of an out-of-sample error rate.
 
 ```{r, message=FALSE}
-learn <- model %>% fit(train_x, train_y_c, epochs = 30, 
+learn <- model %>% fit(train_x, train_y_c, epochs = 30, #When we go through all of the mini batches that accounts for 1 epoch. Ideally it should be a power of 2. 
                        batch_size = 128,
                        # callbacks = list(callback_tensorboard(log_dir = "logs/run_b")),
-                       validation_split = 0.2) 
+                       validation_split = 0.2) # WE will use the validation split. So 20% as validation. 
 
 # loss and acuracy metric for each epoch 
 plot(learn, labels = TRUE)
